@@ -37,17 +37,107 @@ Create a `.env` file in the root:
 
 ```env
 PORT=8080
-DATABASE_URL=postgresql://user:password@localhost:5432/authdb
+DATABASE_URL=postgresql://user:password@localhost:5432/<db-name>
 ```
 
 You also need RSA key files for JWT signing. Generate them:
 
 ```bash
-openssl genrsa -out private.pem 2048
-openssl rsa -in private.pem -pubout -out public.pem
+#!/bin/bash
+
+# Set the directory where certificates will be stored
+CERT_DIR="cert"
+
+# Create the directory if it does not exist
+mkdir -p "$CERT_DIR"
+
+# Generate the private key (RSA 2048-bit)
+openssl genpkey -algorithm RSA -out "$CERT_DIR/private-key.pem" -pkeyopt rsa_keygen_bits:2048
+
+# Generate the public key from the private key
+openssl rsa -in "$CERT_DIR/private-key.pem" -pubout -out "$CERT_DIR/public-key.pub"
+
+# Print success message
+echo "Keys have been generated in the $CERT_DIR/ folder."
 ```
 
-### Database Setup
+### Run PostgreSQL with Docker
+
+The easiest way to get a database running locally is with Docker:
+
+```bash
+# Start a PostgreSQL container
+docker run -d \
+  --name <name> \
+  -e POSTGRES_USER=user \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=oidc_auth \
+  -p 5432:5432 \
+  postgres:17
+```
+
+Then set your `.env` to match:
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/<db-name>
+```
+
+Useful container commands:
+
+```bash
+# Stop the container
+docker stop <cont-name>
+
+# Start it again later
+docker start <cont-name>
+
+# View logs
+docker logs <cont-name>
+
+# Open a psql shell inside the container
+docker exec -it <cont-name> psql -U user -d <db-name>
+```
+
+Alternatively, if you prefer Docker Compose, add this `docker-compose.yml` to your project root:
+
+```yaml
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=oidc_auth
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+Then run:
+
+```bash
+# Start DB in background
+docker compose up -d postgres
+
+# Stop DB
+docker compose down
+
+# Stop DB and wipe all data
+docker compose down -v
+```
+
+> When running the auth server itself inside Docker, change `localhost` in `DATABASE_URL` to the service name — `postgres` — so the containers can reach each other:
+>
+> ```env
+> DATABASE_URL=postgresql://user:password@postgres:5432/<db-name>
+> ```
+
+### Database Migrations
 
 ```bash
 # Generate migrations from schema
