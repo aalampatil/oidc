@@ -51,3 +51,15 @@ export const authCodesTable = pgTable("auth_codes", {
   used: boolean("used").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+//ref token schema
+export const refreshTokensTable = pgTable("refresh_tokens", {
+  token: text("token").primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id),
+  clientId: text("client_id").references(() => oauthClientsTable.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
