@@ -16,7 +16,7 @@
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: #fff;
-        color: #111;
+        color: #000;
         min-height: 100dvh;
         display: flex;
         align-items: center;
@@ -28,36 +28,49 @@
       .card {
         width: 100%;
         max-width: 360px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        border: 1px solid black;
+        padding: 20px 40px;
+        border-radius: 5px;
+        box-shadow: 2px 2px 5px 2px rgba(0, 0, 0, 0.3);
       }
 
       .header {
         margin-bottom: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
 
       .icon {
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
         background: #000;
-        border-radius: 8px;
-        display: inline-flex;
+        border-radius: 50%;
+        display: flex;
         align-items: center;
         justify-content: center;
         margin-bottom: 1.25rem;
       }
 
       h1 {
-        font-size: 1.25rem;
+        font-size: 1.2rem;
         font-weight: 600;
         letter-spacing: -0.02em;
+        color: #000;
       }
 
       .subtitle {
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         color: #6b7280;
         margin-top: 0.3rem;
       }
 
       .form {
+        width: 100%;
         display: flex;
         flex-direction: column;
         gap: 0.875rem;
@@ -67,6 +80,7 @@
         display: flex;
         flex-direction: column;
         gap: 0.35rem;
+        text-align: left;
       }
 
       .field-row {
@@ -76,32 +90,32 @@
       }
 
       label {
-        font-size: 0.825rem;
+        font-size: 0.82rem;
         font-weight: 500;
-        color: #111;
+        color: #000;
       }
 
       .forgot {
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         color: #6b7280;
         text-decoration: none;
         transition: color 0.15s;
       }
 
       .forgot:hover {
-        color: #111;
+        color: #000;
       }
 
       input {
         width: 100%;
-        height: 2.25rem;
-        padding: 0 0.75rem;
+        height: 2.4rem;
+        padding: 0 0.9rem;
         font-family: inherit;
         font-size: 0.875rem;
-        color: #111;
+        color: #000;
         background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 0;
         outline: none;
         transition: border-color 0.15s;
       }
@@ -109,30 +123,32 @@
       input::placeholder {
         color: #9ca3af;
       }
+
       input:focus {
         border-color: #000;
       }
 
       .error-msg {
         display: none;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         color: #ef4444;
-        border: 1px solid #fecaca;
-        border-radius: 8px;
-        padding: 0.6rem 0.75rem;
+        border: 1.5px solid #fecaca;
+        border-radius: 0;
+        padding: 0.55rem 0.9rem;
         background: #fef2f2;
+        text-align: left;
       }
 
       button[type="submit"] {
         width: 100%;
-        height: 2.25rem;
+        height: 2.4rem;
         font-family: inherit;
         font-size: 0.875rem;
         font-weight: 500;
         color: #fff;
         background: #000;
-        border: none;
-        border-radius: 8px;
+        border: 1.5px solid #000;
+        border-radius: 0;
         cursor: pointer;
         margin-top: 0.25rem;
         display: flex;
@@ -140,11 +156,13 @@
         justify-content: center;
         gap: 0.5rem;
         transition: opacity 0.15s;
+        letter-spacing: -0.01em;
       }
 
       button[type="submit"]:hover {
-        opacity: 0.8;
+        opacity: 0.75;
       }
+
       button[type="submit"]:disabled {
         opacity: 0.4;
         cursor: not-allowed;
@@ -167,22 +185,25 @@
       }
 
       .footer {
+        width: 100%;
         text-align: center;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         color: #6b7280;
         margin-top: 1.5rem;
         padding-top: 1.5rem;
-        border-top: 1px solid #f3f4f6;
+        border-top: 1.5px solid #f3f4f6;
       }
 
       .footer a {
-        color: #111;
+        color: #000;
         font-weight: 500;
         text-decoration: none;
+        border-bottom: 1px solid #000;
+        padding-bottom: 0.05rem;
       }
 
       .footer a:hover {
-        text-decoration: underline;
+        opacity: 0.6;
       }
     </style>
   </head>
@@ -191,8 +212,8 @@
       <div class="header">
         <div class="icon">
           <svg
-            width="18"
-            height="18"
+            width="17"
+            height="17"
             viewBox="0 0 24 24"
             fill="none"
             stroke="#fff"
@@ -308,7 +329,6 @@
           } else if (data.redirect) {
             window.location.href = data.redirect;
           } else if (data.token) {
-            // store token and redirect to app
             localStorage.setItem("token", data.token);
             window.location.href = params.get("redirect_uri") ?? "/";
           }

@@ -1,9 +1,7 @@
 import { Router } from "express";
-import express from "express";
 import jose from "node-jose";
 import { PUBLIC_KEY } from "../../utils/cert";
 
-const app = express();
 const PORT = process.env.PORT ?? 8080;
 const ISSUER = process.env.ISSUER_URL ?? `http://localhost:${PORT}`;
 
