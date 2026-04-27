@@ -37,6 +37,7 @@ thirdPartyRouter.post("/register", async (req, res) => {
 // specific routes before /:clientId param route
 thirdPartyRouter.get("/authorize", async (req, res) => {
   const { client_id, redirect_uri, scope, state, response_type } = req.query;
+  console.table([client_id, redirect_uri, scope, state, response_type]);
 
   if (response_type !== "code") {
     return res.status(400).json({ error: "unsupported_response_type" });
@@ -102,6 +103,7 @@ thirdPartyRouter.post("/authorize", async (req, res) => {
 
 // param route last
 thirdPartyRouter.get("/:clientId", async (req, res) => {
+  console.log(req.params);
   const [client] = await db
     .select({ name: oauthClientsTable.name, scopes: oauthClientsTable.scopes })
     .from(oauthClientsTable)

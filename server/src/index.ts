@@ -1,26 +1,8 @@
-import crypto from "node:crypto";
 import express from "express";
 import path from "node:path";
-import { eq } from "drizzle-orm";
-import JWT from "jsonwebtoken";
-import jose from "node-jose";
-import { db } from "./db";
-import {
-  authCodesTable,
-  oauthClientsTable,
-  refreshTokensTable,
-  usersTable,
-} from "./db/schema";
-import { PRIVATE_KEY, PUBLIC_KEY } from "./utils/cert";
-import type { JWTClaims } from "./utils/user-token";
 import cors from "cors";
-import {
-  createRefreshToken,
-  signAccessToken,
-  signIdToken,
-} from "./utils/helper";
 import { oidcRouter } from "./modules/oidcAuth/oidcAuth.routes";
-import { thirdPartyRouter } from "./modules/oauth/3rdparty.routes";
+import { thirdPartyRouter } from "./modules/oauth-3rdparty/3rdparty.routes";
 import { oidcDiscoveryRouter } from "./modules/oidcDiscovery/oidcDiscovery.routes";
 
 async function main() {
