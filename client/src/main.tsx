@@ -3,11 +3,19 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
 import { RouterProvider, createBrowserRouter } from "react-router-dom"
+import Hero from './pages/Hero'
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App />
+    element: <App />,
+    children: [
+      {
+        path: "",
+        index: true,
+        element: <Hero />
+      }
+    ]
   }
 ])
 
