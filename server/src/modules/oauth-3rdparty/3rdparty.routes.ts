@@ -11,6 +11,7 @@ export const thirdPartyRouter = Router();
 
 thirdPartyRouter.post("/register", async (req, res) => {
   const { name, redirectUris, scopes } = req.body;
+  console.log(name, redirectUris, scopes);
 
   const clientId = crypto.randomBytes(16).toString("hex");
   const clientSecret = crypto.randomBytes(32).toString("hex");
