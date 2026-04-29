@@ -30,6 +30,7 @@ oidcRouter.get("/authenticate/register", (req, res) => {
 
 oidcRouter.post("/authenticate/register", async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
+  console.log(firstName, lastName, email, password);
 
   if (!email || !password || !firstName) {
     res
