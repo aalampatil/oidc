@@ -9,6 +9,7 @@ import Register from './pages/Register'
 import TrustForm from './pages/TrustForm'
 import AccountPage from './pages/AccountPage'
 import ConsentScreen from './pages/ConsentScreen'
+import Docs from './pages/Docs'
 
 const router = createBrowserRouter([
   {
@@ -38,7 +39,7 @@ const router = createBrowserRouter([
       },
       {
         path: "docs",
-        element: <div className="mx-auto w-full max-w-7xl px-6 py-20 text-2xl font-heading md:px-10">Docs page coming soon.</div>
+        element: <Docs />
       },
 
     ]
