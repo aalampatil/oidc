@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import path from "node:path";
 import { eq } from "drizzle-orm";
 import { db } from "../../db/index";
 import { authCodesTable, oauthClientsTable, usersTable } from "../../db/schema";
