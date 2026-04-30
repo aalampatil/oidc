@@ -9,6 +9,7 @@ export const thirdPartyRouter = Router();
 
 // ── OAuth third-party clients ─────────────────────────────────────────────────
 
+// this is trust form which client will fill and he will get his clientId and client secret
 thirdPartyRouter.post("/register", async (req, res) => {
   const { name, redirectUris, scopes } = req.body;
   console.log(name, redirectUris, scopes);
@@ -35,7 +36,9 @@ thirdPartyRouter.post("/register", async (req, res) => {
   });
 });
 
-// specific routes before /:clientId param route
+// this is the route which will come from client application backend, then we will verify client cred if it got verified we will redirect it to the consent screen
+
+// Get - http://localhost:3000/o/3rd-party-client/authorize?client_id=fb7450680124ba1b6835a9809b4ceae9&redirect_uri=https://x.com&response_type=code&scope=&state
 thirdPartyRouter.get("/authorize", async (req, res) => {
   const { client_id, redirect_uri, scope, state, response_type } = req.query;
   console.table([client_id, redirect_uri, scope, state, response_type]);
@@ -44,19 +47,24 @@ thirdPartyRouter.get("/authorize", async (req, res) => {
     return res.status(400).json({ error: "unsupported_response_type" });
   }
 
-  const [client] = await db
+  const client = await db
     .select()
     .from(oauthClientsTable)
-    .where(eq(oauthClientsTable.id, client_id as string));
+    .where(eq(oauthClientsTable.id, client_id as string))
+    .limit(1)
+    .then((rows) => rows[0]);
 
   if (!client) return res.status(400).json({ error: "invalid_client" });
 
-  const allowedUris: string[] = JSON.parse(client.redirectUris);
+  const allowedUris: string = JSON.parse(client.redirectUris);
   if (!allowedUris.includes(redirect_uri as string)) {
     return res.status(400).json({ error: "invalid_redirect_uri" });
   }
 
-  return res.sendFile(path.resolve("public", "consent.html"));
+  return res.redirect(
+    `http://localhost:5173/consent?app=${client.name}&client_id=${client.id}&redirect_uri=${encodeURIComponent(allowedUris)}&response_type=code`,
+  );
+  // instead of sendfile, i should redirect this to front end with along with the cliend id and redirec uri, scope and state
 });
 
 thirdPartyRouter.post("/authorize", async (req, res) => {
@@ -95,11 +103,15 @@ thirdPartyRouter.post("/authorize", async (req, res) => {
     expiresAt,
   });
 
-  const url = new URL(redirect_uri as string);
+  const cleanRedirectUri = redirect_uri.replace(/^"+|"+$/g, "");
+  // const url = new URL(cleanRedirectUri)
+  const url = new URL(cleanRedirectUri as string);
   url.searchParams.set("code", code);
   if (state) url.searchParams.set("state", state as string);
 
-  return res.redirect(url.toString());
+  return res.json({
+    redirect_url: url.toString(),
+  });
 });
 
 // param route last

@@ -45,7 +45,7 @@ type ThirdPartyState = {
     payload: RegisterThirdPartyPayload,
   ) => Promise<RegisterThirdPartyResponse | null>;
   fetchClientMeta: (clientId: string) => Promise<ClientMetaResponse | null>;
-  authorize: (payload: AuthorizePayload) => Promise<boolean>;
+  authorize: (payload: AuthorizePayload) => Promise<ThirdPartyState | null>;
   clearState: () => void;
   clearError: () => void;
 };
@@ -124,9 +124,9 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
       authorize: async (payload) => {
         set({ loading: true, error: null });
         try {
-          await thirdPartyApi.post("/authorize", payload);
+          const { data } = await thirdPartyApi.post("/authorize", payload);
           set({ loading: false });
-          return true;
+          return data;
         } catch (error) {
           const message = axios.isAxiosError(error)
             ? ((error.response?.data?.message as string | undefined) ??

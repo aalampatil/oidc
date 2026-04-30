@@ -1,11 +1,42 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useThirdPartyStore } from '@/store/thirdParty.store'
 
 const ConsentScreen = () => {
   const [searchParams] = useSearchParams()
+  const { authorize } = useThirdPartyStore()
+  const [email, setEmail] = useState<string>('')
+  const [password, setPassword] = useState<string>('')
+
   const appName = searchParams.get('app') ?? 'Trusted Application'
   const requestedScopes = (searchParams.get('scope') ?? 'openid email profile').split(' ')
+  const clientId = searchParams.get('client_id') ?? ''
+  const redirectUri = searchParams.get('redirect_uri') ?? ''
+  const responseType = searchParams.get('response_type') ?? ''
+
+  const handleSubmit = async () => {
+    try {
+      console.log({ email, password, client_id: clientId, redirect_uri: redirectUri })
+      const response = await authorize({ email, password, client_id: clientId, redirect_uri: redirectUri }) as unknown as { redirect_url?: string } | null
+      console.log(response)
+      if (response?.redirect_url) {
+        window.location.href = response.redirect_url
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(() => {
+    console.table([appName, requestedScopes, redirectUri, responseType])
+  }, [searchParams, appName, redirectUri, requestedScopes, responseType])
+
+  //todo- ab user jaise hi allow access pe click karega 
+  // post request to http://localhost:3000/o/3rd-party-client/authorize
+  // body mai data jayga (email, password, client_id, redirect_uri, opt-scope, opt-state) 
+  // email password match = redirect to redirect uri which is already handled in backend
+
 
   return (
     <section className="mx-auto flex min-h-[80vh] w-full max-w-7xl items-center px-6 py-16 md:px-10">
@@ -39,8 +70,34 @@ const ConsentScreen = () => {
 
         <div className="relative">
           <div className="absolute -left-3 -top-3 h-full w-full border-2 border-border bg-chart-4" />
-          <form className="relative space-y-5 border-2 border-border bg-secondary-background p-6 shadow-shadow md:p-8">
+          <div className="relative space-y-5 border-2 border-border bg-secondary-background p-6 shadow-shadow md:p-8">
             <h2 className="text-2xl font-heading">Allow Access?</h2>
+
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-xs font-heading uppercase">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@company.com"
+                className="w-full border-2 border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-xs font-heading uppercase">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Enter password"
+                className="w-full border-2 border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
 
             <div className="space-y-3 border-2 border-border bg-background p-4">
               <p className="text-xs font-heading uppercase">Requested scopes</p>
@@ -62,9 +119,9 @@ const ConsentScreen = () => {
               <Button type="button" variant="neutral" asChild>
                 <Link to="/">Deny</Link>
               </Button>
-              <Button type="submit">Allow</Button>
+              <Button onClick={handleSubmit}>Allow</Button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </section>
