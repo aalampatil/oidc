@@ -1,3 +1,5 @@
+import "dotenv/config";
+import { env } from "./env.js";
 import express from "express";
 import path from "node:path";
 import cors from "cors";
@@ -7,7 +9,7 @@ import { oidcDiscoveryRouter } from "./modules/oidcDiscovery/oidcDiscovery.route
 
 async function main() {
   const app = express();
-  const PORT = process.env.PORT ?? 8080;
+  const PORT = env.PORT || 3000;
 
   app.use(cors());
   app.use(express.json());
