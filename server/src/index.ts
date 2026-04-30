@@ -27,7 +27,7 @@ async function main() {
   app.use("/o/3rd-party-client", thirdPartyRouter);
 
   app.listen(PORT, () => {
-    console.log(`server is listening on http://localhost:${PORT}`);
+    console.log(`server is listening on ${env.SERVER}`);
   });
 }
 

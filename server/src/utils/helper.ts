@@ -1,21 +1,12 @@
 import crypto from "node:crypto";
-import express from "express";
-import path from "node:path";
-import { eq } from "drizzle-orm";
 import JWT from "jsonwebtoken";
-import jose from "node-jose";
-import { db } from "../db/index";
-import {
-  authCodesTable,
-  oauthClientsTable,
-  refreshTokensTable,
-  usersTable,
-} from "../db/schema";
-import { PRIVATE_KEY, PUBLIC_KEY } from "../utils/cert";
-import type { JWTClaims } from "../utils/user-token";
-import cors from "cors";
 
-const ISSUER = process.env.ISSUER_URL ?? `http://localhost:${process.env.PORT}`;
+import { db } from "../db/index";
+import { refreshTokensTable } from "../db/schema";
+import { PRIVATE_KEY } from "../utils/cert";
+import { env } from "../env";
+
+const ISSUER = `${env.ISSUER_URL}`;
 
 // ── Token helpers ────────────────────────────────────────────────────────────
 

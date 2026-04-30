@@ -156,7 +156,7 @@ bun db:studio
 bun dev
 ```
 
-Server starts at `http://localhost:8080`.
+Server starts at `http://localhost:3000`.
 
 ---
 

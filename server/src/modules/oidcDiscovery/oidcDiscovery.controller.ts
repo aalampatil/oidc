@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 import jose from "node-jose";
 import { PUBLIC_KEY } from "../../utils/cert";
+import { env } from "../../env";
 
-const PORT = process.env.PORT ?? 8080;
-const ISSUER = process.env.ISSUER_URL ?? `http://localhost:${PORT}`;
+const ISSUER = env.ISSUER_URL ?? env.SERVER;
 
 export class OidcDiscoveryController {
   openidConfiguration = (_req: Request, res: Response) => {

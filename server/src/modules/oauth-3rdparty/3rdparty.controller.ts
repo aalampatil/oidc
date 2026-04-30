@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { db } from "../../db/index";
 import { authCodesTable, oauthClientsTable, usersTable } from "../../db/schema";
+import { env } from "../../env";
 
 export class ThirdPartyController {
   register = async (req: Request, res: Response) => {
@@ -64,7 +65,7 @@ export class ThirdPartyController {
     if (scope) params.set("scope", scope as string);
     if (state) params.set("state", state as string);
 
-    return res.redirect(`http://localhost:5173/consent?${params.toString()}`);
+    return res.redirect(`${env.CLIENT}/consent?${params.toString()}`);
   };
 
   postAuthorize = async (req: Request, res: Response) => {
