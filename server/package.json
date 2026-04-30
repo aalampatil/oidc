@@ -17,6 +17,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
+    "build": "tsc",
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
     "db:migrate:prod": "dotenv -e .env.production drizzle-kit migrate",
