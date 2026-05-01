@@ -11,7 +11,16 @@ async function main() {
   const app = express();
   const PORT = env.PORT || 3000;
 
-  app.use(cors());
+  app.use(
+    cors({
+      origin: [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        env.CLIENT as string,
+      ],
+      methods: ["GET", "POST", "PUT", "DELETE"],
+    }),
+  );
   app.use(express.json());
   app.use(express.static(path.resolve("public")));
   app.use(express.urlencoded({ extended: true }));
