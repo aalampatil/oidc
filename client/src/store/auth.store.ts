@@ -1,6 +1,7 @@
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { authApi } from "@/configs/axiosApi";
 
 type RegisterPayload = {
   firstName: string;
@@ -40,6 +41,7 @@ type AuthState = {
   expiresIn: number | null;
   user: UserInfo | null;
   loading: boolean;
+  authStatus: boolean;
   error: string | null;
   register: (payload: RegisterPayload) => Promise<boolean>;
   login: (payload: LoginPayload) => Promise<boolean>;
@@ -47,17 +49,6 @@ type AuthState = {
   clearError: () => void;
   logout: () => void;
 };
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ??
-  "http://localhost:3000";
-
-const authApi = axios.create({
-  baseURL: `${API_BASE_URL}/o`,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -69,6 +60,7 @@ export const useAuthStore = create<AuthState>()(
       expiresIn: null,
       user: null,
       loading: false,
+      authStatus: false,
       error: null,
 
       register: async (payload) => {
@@ -95,6 +87,7 @@ export const useAuthStore = create<AuthState>()(
             "/authenticate/login",
             payload,
           );
+          console.log(data);
 
           set({
             accessToken: data.access_token,
@@ -103,6 +96,7 @@ export const useAuthStore = create<AuthState>()(
             tokenType: data.token_type,
             expiresIn: data.expires_in,
             loading: false,
+            authStatus: true,
           });
           return true;
         } catch (error) {
@@ -112,6 +106,7 @@ export const useAuthStore = create<AuthState>()(
             : "Login failed.";
           set({
             loading: false,
+            authStatus: false,
             error: message,
             accessToken: null,
             idToken: null,

@@ -1,5 +1,3 @@
-import JWT from "jsonwebtoken";
-
 export interface JWTClaims {
   iss: string;
   sub: string;

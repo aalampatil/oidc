@@ -1,6 +1,7 @@
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { thirdPartyApi } from "@/configs/axiosApi";
 
 type RegisterThirdPartyPayload = {
   name: string;
@@ -49,17 +50,6 @@ type ThirdPartyState = {
   clearState: () => void;
   clearError: () => void;
 };
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ??
-  "http://localhost:3000";
-
-const thirdPartyApi = axios.create({
-  baseURL: `${API_BASE_URL}/o/3rd-party-client`,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
 
 export const useThirdPartyStore = create<ThirdPartyState>()(
   persist(

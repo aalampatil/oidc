@@ -10,6 +10,7 @@ import TrustForm from './pages/TrustForm'
 import AccountPage from './pages/AccountPage'
 import ConsentScreen from './pages/ConsentScreen'
 import Docs from './pages/Docs'
+import Protected from './configs/protected'
 
 const router = createBrowserRouter([
   {
@@ -31,11 +32,15 @@ const router = createBrowserRouter([
       },
       {
         path: "trust-form",
-        element: <TrustForm />
+        element: <Protected authentication>
+          <TrustForm />
+        </Protected>
       },
       {
         path: "account",
-        element: <AccountPage />
+        element: <Protected authentication>
+          <AccountPage />
+        </Protected>
       },
       {
         path: "docs",
