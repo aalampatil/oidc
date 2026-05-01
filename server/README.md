@@ -1,371 +1,389 @@
-# Auth Server
+# OIDC Identity Provider
 
-A custom **OpenID Connect (OIDC) + OAuth 2.0 Authorization Server** built with Express, Drizzle ORM, and PostgreSQL. Supports direct login for your own apps and a full OAuth 2.0 Authorization Code Flow for third-party clients — just like "Sign in with Google".
+A from-scratch implementation of an **OpenID Connect (OIDC) Identity Provider** built with Bun + Express on the backend and React on the frontend. This project lets you understand how OAuth 2.0 and OIDC work under the hood by building the actual authorization server yourself.
+
+---
+
+## What is this?
+
+This is a fully functional OIDC **Authorization Server** (also called an Identity Provider or IdP). Third-party applications can integrate with it — just like "Sign in with Google" — to authenticate users without ever handling their passwords directly.
 
 ---
 
 ## Tech Stack
 
-| Package              | Purpose                          |
-| -------------------- | -------------------------------- |
-| `express`            | HTTP server                      |
-| `drizzle-orm` + `pg` | Database ORM + PostgreSQL driver |
-| `jsonwebtoken`       | JWT signing and verification     |
-| `node-jose`          | JWKS / public key exposure       |
-| `cors`               | Cross-origin request handling    |
-| `dotenv`             | Environment variable management  |
-| `bun`                | Runtime + dev server             |
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- [Bun](https://bun.sh) installed
-- PostgreSQL database running
-
-### Installation
-
-```bash
-bun install
-```
-
-### Environment Variables
-
-Create a `.env` file in the root:
-
-```env
-PORT=8080
-DATABASE_URL=postgresql://user:password@localhost:5432/<db-name>
-```
-
-You also need RSA key files for JWT signing. Generate them:
-
-```bash
-#!/bin/bash
-
-# Set the directory where certificates will be stored
-CERT_DIR="cert"
-
-# Create the directory if it does not exist
-mkdir -p "$CERT_DIR"
-
-# Generate the private key (RSA 2048-bit)
-openssl genpkey -algorithm RSA -out "$CERT_DIR/private-key.pem" -pkeyopt rsa_keygen_bits:2048
-
-# Generate the public key from the private key
-openssl rsa -in "$CERT_DIR/private-key.pem" -pubout -out "$CERT_DIR/public-key.pub"
-
-# Print success message
-echo "Keys have been generated in the $CERT_DIR/ folder."
-```
-
-### Run PostgreSQL with Docker
-
-The easiest way to get a database running locally is with Docker:
-
-```bash
-# Start a PostgreSQL container
-docker run -d \
-  --name <name> \
-  -e POSTGRES_USER=user \
-  -e POSTGRES_PASSWORD=password \
-  -e POSTGRES_DB=oidc_auth \
-  -p 5432:5432 \
-  postgres:17
-```
-
-Then set your `.env` to match:
-
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/<db-name>
-```
-
-Useful container commands:
-
-```bash
-# Stop the container
-docker stop <cont-name>
-
-# Start it again later
-docker start <cont-name>
-
-# View logs
-docker logs <cont-name>
-
-# Open a psql shell inside the container
-docker exec -it <cont-name> psql -U user -d <db-name>
-```
-
-Alternatively, if you prefer Docker Compose, add this `docker-compose.yml` to your project root:
-
-```yaml
-services:
-  postgres:
-    image: postgres:17
-    restart: unless-stopped
-    ports:
-      - 5432:5432
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=oidc_auth
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-volumes:
-  pgdata:
-```
-
-Then run:
-
-```bash
-# Start DB in background
-docker compose up -d postgres
-
-# Stop DB
-docker compose down
-
-# Stop DB and wipe all data
-docker compose down -v
-```
-
-> When running the auth server itself inside Docker, change `localhost` in `DATABASE_URL` to the service name — `postgres` — so the containers can reach each other:
->
-> ```env
-> DATABASE_URL=postgresql://user:password@postgres:5432/<db-name>
-> ```
-
-### Database Migrations
-
-```bash
-# Generate migrations from schema
-bun db:generate
-
-# Run migrations
-bun db:migrate
-
-# Optional: open Drizzle Studio to inspect DB
-bun db:studio
-```
-
-### Run Dev Server
-
-```bash
-bun dev
-```
-
-Server starts at `http://localhost:3000`.
-
----
-
-## OIDC Discovery
-
-The server exposes a standard OpenID Connect discovery document:
-
-```
-GET /.well-known/openid-configuration
-```
-
-```json
-{
-  "issuer": "http://localhost:8080",
-  "authorization_endpoint": "http://localhost:8080/o/authorize",
-  "token_endpoint": "http://localhost:8080/o/token",
-  "userinfo_endpoint": "http://localhost:8080/o/userinfo",
-  "jwks_uri": "http://localhost:8080/.well-known/jwks.json"
-}
-```
-
----
-
-## API Reference
-
-### Direct Auth (Your Own App)
-
-#### `POST /o/authenticate/register`
-
-Register a new user.
-
-```json
-// Request body
-{
-  "firstName": "Jane",
-  "lastName": "Doe",
-  "email": "jane@example.com",
-  "password": "securepassword"
-}
-
-// Response 201
-{ "ok": true }
-```
-
-#### `POST /o/authenticate/login`
-
-Log in and receive a JWT directly.
-
-```json
-// Request body
-{ "email": "jane@example.com", "password": "securepassword" }
-
-// Response 200
-{ "token": "<signed JWT>" }
-```
-
-#### `GET /o/userinfo`
-
-Get the authenticated user's profile. Requires a Bearer token.
-
-```
-Authorization: Bearer <token>
-```
-
-```json
-// Response 200
-{
-  "sub": "uuid",
-  "email": "jane@example.com",
-  "email_verified": false,
-  "given_name": "Jane",
-  "family_name": "Doe",
-  "name": "Jane Doe",
-  "picture": null
-}
-```
-
----
-
-### OAuth 2.0 Flow (Third-Party Clients)
-
-Use this flow when external apps want to authenticate users via your server.
-
-#### Step 1 — Register a Client
-
-```http
-POST /o/clients/register
-Content-Type: application/json
-
-{
-  "name": "My Third-Party App",
-  "redirectUris": ["https://myapp.com/callback"],
-  "scopes": "openid email profile"
-}
-```
-
-```json
-// Response — save these, secret is shown only once
-{
-  "clientId": "abc123",
-  "clientSecret": "supersecret"
-}
-```
-
-#### Step 2 — Redirect User to Consent Screen
-
-Your client app redirects the user to:
-
-```
-GET /o/authorize
-  ?client_id=abc123
-  &redirect_uri=https://myapp.com/callback
-  &response_type=code
-  &scope=openid email profile
-  &state=random_csrf_token
-```
-
-The user sees a login + consent screen and clicks **Allow**.
-
-#### Step 3 — Receive Auth Code
-
-Your server redirects back to the client:
-
-```
-https://myapp.com/callback?code=xyz789&state=random_csrf_token
-```
-
-> The client **must verify** the `state` matches what it originally sent.
-
-#### Step 4 — Exchange Code for Token
-
-From your client's **backend**:
-
-```http
-POST /o/token
-Content-Type: application/json
-
-{
-  "grant_type": "authorization_code",
-  "code": "xyz789",
-  "client_id": "abc123",
-  "client_secret": "supersecret",
-  "redirect_uri": "https://myapp.com/callback"
-}
-```
-
-```json
-// Response
-{
-  "access_token": "<signed JWT>",
-  "token_type": "Bearer",
-  "expires_in": 3600,
-  "scope": "openid email profile"
-}
-```
-
-#### Step 5 — Fetch User Info
-
-```http
-GET /o/userinfo
-Authorization: Bearer <access_token>
-```
-
----
-
-## Database Schema
-
-```
-users           — registered user accounts
-oauth_clients   — registered third-party apps (client_id + hashed secret)
-auth_codes      — short-lived one-time codes issued during OAuth flow
-```
-
----
-
-## Security Notes
-
-- Passwords are hashed with `SHA-256` + random salt
-- Client secrets are stored hashed, never in plaintext
-- Auth codes are **single-use** and expire in 10 minutes
-- JWTs are signed with `RS256` using a 2048-bit RSA private key
-- `redirect_uri` is validated against a whitelist on every request
-- `state` parameter should always be validated by the client to prevent CSRF
+| Layer       | Technology                           |
+| ----------- | ------------------------------------ |
+| Runtime     | Bun                                  |
+| Backend     | Express 5, TypeScript                |
+| Frontend    | React, TypeScript, Vite, TailwindCSS |
+| Database    | PostgreSQL via Drizzle ORM           |
+| Auth Tokens | RS256 JWT (`jsonwebtoken`)           |
+| JWKS        | `node-jose`                          |
+| Validation  | Zod                                  |
+| Container   | Docker + Docker Compose              |
 
 ---
 
 ## Project Structure
 
 ```
-src/
-├── index.ts          # Express app + all routes
-├── db/
-│   ├── index.ts      # Drizzle DB client
-│   └── schema.ts     # Table definitions
-└── utils/
-    ├── cert.ts       # RSA key loading
-    └── user-token.ts # JWT claims type
-public/
-├── authenticate.html # Direct login page
-└── consent.html      # OAuth consent screen
+oidc/
+├── client/                          # React frontend
+│   ├── src/
+│   │   ├── pages/
+│   │   │   └── ConsentScreen.tsx    # OAuth consent/approval UI
+│   │   └── store/
+│   │       └── thirdParty.store.ts  # Zustand store for OAuth flows
+│   └── .env
+│
+└── server/                          # Bun + Express backend
+    ├── cert/                        # RSA key pair (generated via key-gen.sh)
+    │   ├── private-key.pem
+    │   └── public-key.pub
+    ├── drizzle/                     # Drizzle migration files
+    ├── src/
+    │   ├── db/
+    │   │   ├── index.ts             # Drizzle DB connection
+    │   │   └── schema.ts            # users, oauth_clients, auth_codes, refresh_tokens
+    │   ├── middlewares/
+    │   ├── modules/
+    │   │   ├── oauth-3rdparty/
+    │   │   │   ├── 3rdparty.controller.ts   # Client registration + consent flow
+    │   │   │   └── 3rdparty.routes.ts
+    │   │   ├── oidcAuth/
+    │   │   │   ├── oidcAuth.controller.ts   # Register, login, userinfo, token, revoke
+    │   │   │   └── oidcAuth.routes.ts
+    │   │   └── oidcDiscovery/
+    │   │       ├── oidcDiscovery.controller.ts  # openid-configuration, jwks.json
+    │   │       └── oidcDiscovery.routes.ts
+    │   ├── utils/
+    │   │   ├── cert.ts              # RSA key loading
+    │   │   ├── helper.ts            # signAccessToken, signIdToken, createRefreshToken
+    │   │   ├── user-token.ts        # JWTClaims type
+    │   │   └── env.ts               # Environment variable validation
+    │   └── index.ts                 # App entry point
+    ├── .env
+    ├── .env.example
+    ├── .env.production
+    ├── docker-compose.yml
+    ├── Dockerfile
+    ├── drizzle.config.js
+    ├── key-gen.sh                   # RSA key generation script
+    └── package.json
 ```
 
 ---
 
-## Scripts
+## How the OAuth 2.0 Authorization Code Flow Works
 
-| Script            | Description                         |
-| ----------------- | ----------------------------------- |
-| `bun dev`         | Start dev server with hot reload    |
-| `bun db:generate` | Generate SQL migrations from schema |
-| `bun db:migrate`  | Run pending migrations              |
-| `bun db:studio`   | Open Drizzle Studio UI              |
+```
+┌─────────────┐        ┌──────────────────┐        ┌─────────────────┐
+│ Third-Party  │        │   This OIDC IdP   │        │      User       │
+│    App       │        │   (Your Server)   │        │   (Browser)     │
+└──────┬───────┘        └────────┬──────────┘        └────────┬────────┘
+       │                         │                             │
+       │  1. GET /o/3rd-party-   │                             │
+       │  client/authorize       │                             │
+       │  ?client_id=&           │                             │
+       │  redirect_uri=&         │                             │
+       │  response_type=code     │                             │
+       │────────────────────────>│                             │
+       │                         │                             │
+       │                         │  2. Validate client,        │
+       │                         │  redirect to /consent       │
+       │                         │────────────────────────────>│
+       │                         │                             │
+       │                         │  3. User fills email +      │
+       │                         │  password, clicks Allow     │
+       │                         │<────────────────────────────│
+       │                         │                             │
+       │                         │  4. POST /o/3rd-party-      │
+       │                         │  client/authorize           │
+       │                         │  → generates auth code      │
+       │                         │  → returns { redirect_url } │
+       │                         │────────────────────────────>│
+       │                         │                             │
+       │  5. Browser redirects   │                             │
+       │  to callback ?code=xyz  │                             │
+       │<────────────────────────────────────────────────────── │
+       │                         │                             │
+       │  6. POST /o/token       │                             │
+       │  { code, client_secret }│                             │
+       │────────────────────────>│                             │
+       │                         │                             │
+       │  { access_token,        │                             │
+       │    id_token,            │                             │
+       │    refresh_token }      │                             │
+       │<────────────────────────│                             │
+       │                         │                             │
+       │  7. GET /o/userinfo     │                             │
+       │  Bearer access_token    │                             │
+       │────────────────────────>│                             │
+       │                         │                             │
+       │  { sub, email, name }   │                             │
+       │<────────────────────────│                             │
+```
+
+---
+
+## API Reference
+
+### OIDC Discovery
+
+| Method | Endpoint                            | Description                      |
+| ------ | ----------------------------------- | -------------------------------- |
+| GET    | `/.well-known/openid-configuration` | OIDC discovery document          |
+| GET    | `/.well-known/jwks.json`            | Public keys for JWT verification |
+
+### Authentication
+
+| Method | Endpoint                   | Description                                              |
+| ------ | -------------------------- | -------------------------------------------------------- |
+| POST   | `/o/authenticate/register` | Register a new user account                              |
+| POST   | `/o/authenticate/login`    | Login, returns access + id + refresh tokens              |
+| GET    | `/o/userinfo`              | Get authenticated user's profile (Bearer token required) |
+
+### Token Management
+
+| Method | Endpoint    | Description                                    |
+| ------ | ----------- | ---------------------------------------------- |
+| POST   | `/o/token`  | Exchange auth code or refresh token for tokens |
+| POST   | `/o/revoke` | Revoke a refresh token                         |
+
+### Third-Party OAuth Client
+
+| Method | Endpoint                        | Description                            |
+| ------ | ------------------------------- | -------------------------------------- |
+| POST   | `/o/3rd-party-client/register`  | Register a third-party OAuth client    |
+| GET    | `/o/3rd-party-client/authorize` | Start the authorization flow           |
+| POST   | `/o/3rd-party-client/authorize` | Submit user consent (email + password) |
+| GET    | `/o/3rd-party-client/:clientId` | Get client metadata                    |
+
+---
+
+## Setup & Installation
+
+### Prerequisites
+
+- [Bun](https://bun.sh) v1.0+
+- Docker + Docker Compose (for PostgreSQL)
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/aalampatil/oidc.git
+cd oidc
+```
+
+### 2. Generate RSA Keys
+
+A script is provided. Run it from the `server/` directory:
+
+```bash
+cd server
+chmod +x key-gen.sh
+./key-gen.sh
+```
+
+This creates `cert/private-key.pem` and `cert/public-key.pub` used for signing JWTs.
+
+### 3. Configure Environment Variables
+
+Copy the example env file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+`server/.env`:
+
+```env
+PORT=3000
+DATABASE_URL=postgresql://ADMIN:ADMIN@localhost:5433/oidc_auth
+ISSUER_URL=http://localhost:3000
+CLIENT=http://localhost:5173
+SERVER=http://localhost:3000
+```
+
+`client/.env`:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+> Make sure `VITE_API_BASE_URL` includes the `http://` or `https://` scheme — missing it causes the URL to be appended as a path instead of used as the base origin.
+
+### 4. Start PostgreSQL
+
+```bash
+cd server
+docker compose up -d
+```
+
+This starts PostgreSQL on port `5433` (mapped from the container's `5432`).
+
+### 5. Run Database Migrations
+
+```bash
+bun run db:migrate
+```
+
+### 6. Start the Server
+
+```bash
+bun run dev
+```
+
+### 7. Start the Client
+
+```bash
+cd client
+bun install
+bun run dev
+```
+
+---
+
+## Using Docker for Everything
+
+```bash
+docker compose up --build
+```
+
+---
+
+## Registering a Third-Party Client
+
+Before starting an OAuth flow your app must register with this IdP:
+
+```bash
+POST http://localhost:3000/o/3rd-party-client/register
+Content-Type: application/json
+
+{
+  "name": "My App",
+  "redirectUris": ["http://localhost:5500/callback.html"],
+  "scopes": "openid email profile"
+}
+```
+
+Response:
+
+```json
+{
+  "clientId": "abc123...",
+  "clientSecret": "xyz789...",
+  "message": "keep the clientId and clientSecret safe"
+}
+```
+
+> Store `clientSecret` only on your backend — never expose it in browser code.
+
+---
+
+## Starting the Authorization Flow
+
+Redirect your users to the authorization endpoint:
+
+```js
+const params = new URLSearchParams({
+  client_id: "YOUR_CLIENT_ID",
+  redirect_uri: "http://localhost:5500/callback.html",
+  response_type: "code",
+  scope: "openid email profile",
+  state: crypto.randomUUID(), // CSRF protection
+});
+
+window.location.href = `http://localhost:3000/o/3rd-party-client/authorize?${params}`;
+```
+
+---
+
+## Exchanging the Code for Tokens
+
+After the user approves, your callback receives `?code=...`. Exchange it **from your backend**:
+
+```bash
+POST http://localhost:3000/o/token
+Content-Type: application/json
+
+{
+  "grant_type": "authorization_code",
+  "code": "received_code_here",
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET",
+  "redirect_uri": "http://localhost:5500/callback.html"
+}
+```
+
+Response:
+
+```json
+{
+  "access_token": "eyJ...",
+  "id_token": "eyJ...",
+  "refresh_token": "eyJ...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "openid email profile"
+}
+```
+
+---
+
+## Refreshing Tokens
+
+```bash
+POST http://localhost:3000/o/token
+Content-Type: application/json
+
+{
+  "grant_type": "refresh_token",
+  "refresh_token": "YOUR_REFRESH_TOKEN",
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET"
+}
+```
+
+Refresh tokens are **rotated on every use** — the old token is invalidated and a new one is returned.
+
+---
+
+## Security Notes
+
+- Passwords are hashed with **SHA-256 + random salt** — plain passwords are never stored
+- JWTs are signed with **RS256** (asymmetric keys) — consumers verify tokens via the JWKS endpoint without contacting this server
+- Auth codes are **single-use** and expire in **10 minutes**
+- Refresh tokens are **rotated** on every use
+- `client_secret` is stored as a SHA-256 hash — the plain secret is shown only once at registration
+
+---
+
+## Supported Grant Types
+
+| Grant Type           | Description                                      |
+| -------------------- | ------------------------------------------------ |
+| `authorization_code` | Standard OAuth 2.0 flow with user consent screen |
+| `refresh_token`      | Obtain a new access token using a refresh token  |
+
+---
+
+## Supported Scopes
+
+| Scope     | Claims Returned                                |
+| --------- | ---------------------------------------------- |
+| `openid`  | `sub`, `iss`, `exp`, `iat`                     |
+| `email`   | `email`, `email_verified`                      |
+| `profile` | `given_name`, `family_name`, `name`, `picture` |
+
+---
+
+## Database Scripts
+
+```bash
+bun run db:generate       # Generate migration files from schema changes
+bun run db:migrate        # Apply migrations to local DB
+bun run db:migrate:prod   # Apply migrations to production DB
+bun run db:studio         # Open Drizzle Studio (DB GUI)
+```

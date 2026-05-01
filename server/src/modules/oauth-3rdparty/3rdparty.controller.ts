@@ -33,6 +33,7 @@ export class ThirdPartyController {
 
   getAuthorize = async (req: Request, res: Response) => {
     const { client_id, redirect_uri, scope, state, response_type } = req.query;
+    console.log(client_id, redirect_uri, scope, state, response_type);
 
     if (response_type !== "code") {
       return res.status(400).json({ error: "unsupported_response_type" });
