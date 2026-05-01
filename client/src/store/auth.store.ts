@@ -64,7 +64,8 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       register: async (payload) => {
-        console.log(payload);
+        // console.log(payload);
+        // console.log();
         set({ loading: true, error: null });
         try {
           await authApi.post("/authenticate/register", payload);
