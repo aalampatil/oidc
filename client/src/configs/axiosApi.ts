@@ -19,3 +19,9 @@ export const thirdPartyApi = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// 1. at the top, new axios instance
+// export const oidcApi = axios.create({
+//   baseURL: `${API_BASE_URL}/o`,
+//   headers: { "Content-Type": "application/json" },
+// });

@@ -45,6 +45,7 @@ export class ThirdPartyController {
       .where(eq(oauthClientsTable.id, client_id as string))
       .limit(1)
       .then((rows) => rows[0]);
+    console.log(client);
 
     if (!client) return res.status(400).json({ error: "invalid_client" });
 
@@ -53,7 +54,7 @@ export class ThirdPartyController {
       return res.status(400).json({ error: "invalid_redirect_uri" });
     }
 
-    const redirectUri = allowedUris[0];
+    const redirectUri = redirect_uri;
     if (!redirectUri) {
       return res.status(400).json({ error: "invalid_redirect_uri" });
     }
@@ -61,10 +62,12 @@ export class ThirdPartyController {
     const params = new URLSearchParams();
     params.set("app", client.name);
     params.set("client_id", client.id);
-    params.set("redirect_uri", redirectUri);
+    params.set("redirect_uri", redirectUri as string);
     params.set("response_type", "code");
     if (scope) params.set("scope", scope as string);
     if (state) params.set("state", state as string);
+
+    console.log(params);
 
     return res.redirect(`${env.CLIENT}/consent?${params.toString()}`);
   };

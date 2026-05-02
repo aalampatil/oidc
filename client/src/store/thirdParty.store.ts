@@ -2,6 +2,7 @@ import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { thirdPartyApi } from "@/configs/axiosApi";
+// oidcApi
 
 type RegisterThirdPartyPayload = {
   name: string;
@@ -29,6 +30,14 @@ type AuthorizePayload = {
   state?: string;
 };
 
+// 2. new type
+// type RegisterUserPayload = {
+//   firstName: string;
+//   lastName?: string;
+//   email: string;
+//   password: string;
+// };
+
 type ThirdPartyState = {
   loading: boolean;
   error: string | null;
@@ -49,6 +58,8 @@ type ThirdPartyState = {
   authorize: (payload: AuthorizePayload) => Promise<ThirdPartyState | null>;
   clearState: () => void;
   clearError: () => void;
+  // 3. add to ThirdPartyState type
+  // registerUser: (payload: RegisterUserPayload) => Promise<boolean>;
 };
 
 export const useThirdPartyStore = create<ThirdPartyState>()(
@@ -137,6 +148,22 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
         }),
 
       clearError: () => set({ error: null }),
+      // 4. add implementation in the store body
+      // registerUser: async (payload) => {
+      //   set({ loading: true, error: null });
+      //   try {
+      //     await oidcApi.post("/authenticate/register", payload);
+      //     set({ loading: false });
+      //     return true;
+      //   } catch (error) {
+      //     const message = axios.isAxiosError(error)
+      //       ? ((error.response?.data?.message as string | undefined) ??
+      //         "Registration failed.")
+      //       : "Registration failed.";
+      //     set({ loading: false, error: message });
+      //     return false;
+      //   }
+      // },
     }),
     {
       name: "third-party-trust-store",
@@ -147,3 +174,5 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
     },
   ),
 );
+
+// thirdParty.store.ts — just add these 3 things:
