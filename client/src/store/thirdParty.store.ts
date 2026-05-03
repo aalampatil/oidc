@@ -27,6 +27,9 @@ type AuthorizePayload = {
   redirect_uri: string;
   scope?: string;
   state?: string;
+  code_challenge: string;
+  code_challenge_method: "S256";
+  nonce?: string;
 };
 
 type ThirdPartyState = {
@@ -46,7 +49,7 @@ type ThirdPartyState = {
     payload: RegisterThirdPartyPayload,
   ) => Promise<RegisterThirdPartyResponse | null>;
   fetchClientMeta: (clientId: string) => Promise<ClientMetaResponse | null>;
-  authorize: (payload: AuthorizePayload) => Promise<ThirdPartyState | null>;
+  authorize: (payload: AuthorizePayload) => Promise<unknown | null>;
   clearState: () => void;
   clearError: () => void;
 };

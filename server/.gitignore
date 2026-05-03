@@ -1,5 +1,8 @@
 node_modules
 .env
+cert/*.pem
+cert/*.pub
+!cert/.gitkeep
 # Logs
 logs
 *.log

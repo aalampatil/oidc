@@ -19,12 +19,26 @@ const ConsentScreen = () => {
   const requestedScopes = (searchParams.get('scope') ?? 'openid email profile').split(' ')
   const clientId = searchParams.get('client_id') ?? ''
   const redirectUri = searchParams.get('redirect_uri') ?? ''
+  const scope = searchParams.get('scope') ?? 'openid email profile'
+  const state = searchParams.get('state') ?? undefined
+  const codeChallenge = searchParams.get('code_challenge') ?? ''
+  const nonce = searchParams.get('nonce') ?? undefined
 
   const error = thirdPartyError ?? authError
   const loading = thirdPartyLoading || authLoading
 
   const handleLogin = async () => {
-    const response = await authorize({ email, password, client_id: clientId, redirect_uri: redirectUri }) as unknown as { redirect_url?: string } | null
+    const response = await authorize({
+      email,
+      password,
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      scope,
+      state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+      nonce,
+    }) as { redirect_url?: string } | null
     if (response?.redirect_url) {
       window.location.href = response.redirect_url
     }

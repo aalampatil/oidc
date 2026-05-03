@@ -19,7 +19,7 @@ export const usersTable = pgTable("users", {
   email: varchar("email", { length: 322 }).notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
 
-  password: varchar("password", { length: 66 }),
+  password: text("password"),
   salt: text("salt"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -47,6 +47,11 @@ export const authCodesTable = pgTable("auth_codes", {
     .references(() => usersTable.id), // links to your existing users table
   redirectUri: text("redirect_uri").notNull(),
   scopes: varchar("scopes", { length: 255 }).notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  codeChallengeMethod: varchar("code_challenge_method", { length: 10 })
+    .notNull()
+    .default("S256"),
+  nonce: text("nonce"),
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -59,6 +64,9 @@ export const refreshTokensTable = pgTable("refresh_tokens", {
     .notNull()
     .references(() => usersTable.id),
   clientId: text("client_id").references(() => oauthClientsTable.id),
+  scopes: varchar("scopes", { length: 255 }).notNull().default("openid"),
+  replacedBy: text("replaced_by"),
+  revokedAt: timestamp("revoked_at"),
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

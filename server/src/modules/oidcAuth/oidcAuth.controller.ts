@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import JWT from "jsonwebtoken";
 import type { Request, Response } from "express";
 import { db } from "../../db/index";
@@ -16,6 +16,16 @@ import {
   signAccessToken,
   signIdToken,
 } from "../../utils/helper";
+import {
+  hashOpaqueToken,
+  hashPassword,
+  safeEqualString,
+  verifyPassword,
+} from "../../utils/security";
+import { normalizeScopes, verifyPkce } from "../../utils/oidc";
+import { env } from "../../env";
+
+const ISSUER = env.ISSUER_URL;
 
 export class OidcController {
   register = async (req: Request, res: Response) => {
@@ -39,11 +49,7 @@ export class OidcController {
         .json({ message: "An account with this email already exists." });
     }
 
-    const salt = crypto.randomBytes(16).toString("hex");
-    const hash = crypto
-      .createHash("sha256")
-      .update(password + salt)
-      .digest("hex");
+    const { hash, salt } = await hashPassword(password);
 
     await db.insert(usersTable).values({
       firstName,
@@ -75,18 +81,14 @@ export class OidcController {
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    const hash = crypto
-      .createHash("sha256")
-      .update(password + user.salt)
-      .digest("hex");
-
-    if (hash !== user.password) {
+    if (!(await verifyPassword(password, user.password, user.salt))) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    const accessToken = signAccessToken(user.id);
+    const scope = "openid email profile";
+    const accessToken = signAccessToken(user.id, "self", scope);
     const idToken = signIdToken(user, "self");
-    const refreshToken = await createRefreshToken(user.id, null);
+    const refreshToken = await createRefreshToken(user.id, null, scope);
 
     return res.json({
       access_token: accessToken,
@@ -112,9 +114,14 @@ export class OidcController {
     try {
       claims = JWT.verify(token, PUBLIC_KEY, {
         algorithms: ["RS256"],
+        issuer: ISSUER,
       }) as JWTClaims;
     } catch {
       return res.status(401).json({ message: "Invalid or expired token." });
+    }
+
+    if ((claims as JWTClaims & { token_use?: string }).token_use !== "access") {
+      return res.status(401).json({ message: "Invalid token type." });
     }
 
     const [user] = await db
@@ -140,6 +147,14 @@ export class OidcController {
   token = async (req: Request, res: Response) => {
     const { grant_type, client_id, client_secret } = req.body;
 
+    if (
+      typeof grant_type !== "string" ||
+      typeof client_id !== "string" ||
+      typeof client_secret !== "string"
+    ) {
+      return res.status(400).json({ error: "invalid_request" });
+    }
+
     const [client] = await db
       .select()
       .from(oauthClientsTable)
@@ -150,7 +165,7 @@ export class OidcController {
       .update(client_secret)
       .digest("hex");
 
-    if (!client || hashed_secret !== client.secret) {
+    if (!client || !safeEqualString(hashed_secret, client.secret)) {
       return res.status(401).json({ error: "invalid_client" });
     }
 
@@ -170,26 +185,40 @@ export class OidcController {
     res: Response,
     client_id: string,
   ) => {
-    const { code, redirect_uri } = req.body;
+    const { code, redirect_uri, code_verifier } = req.body;
+
+    if (
+      typeof code !== "string" ||
+      typeof redirect_uri !== "string" ||
+      typeof code_verifier !== "string"
+    ) {
+      return res.status(400).json({ error: "invalid_request" });
+    }
 
     const [authCode] = await db
       .select()
       .from(authCodesTable)
-      .where(eq(authCodesTable.code, code));
+      .where(and(eq(authCodesTable.code, code), eq(authCodesTable.clientId, client_id)));
 
     if (
       !authCode ||
       authCode.used ||
       new Date() > authCode.expiresAt ||
-      authCode.redirectUri !== redirect_uri
+      authCode.redirectUri !== redirect_uri ||
+      !verifyPkce(code_verifier, authCode.codeChallenge)
     ) {
       return res.status(400).json({ error: "invalid_grant" });
     }
 
-    await db
+    const consumedCodes = await db
       .update(authCodesTable)
       .set({ used: true })
-      .where(eq(authCodesTable.code, code));
+      .where(and(eq(authCodesTable.code, code), eq(authCodesTable.used, false)))
+      .returning({ code: authCodesTable.code });
+
+    if (consumedCodes.length === 0) {
+      return res.status(400).json({ error: "invalid_grant" });
+    }
 
     const [user] = await db
       .select()
@@ -198,9 +227,9 @@ export class OidcController {
 
     if (!user) return res.status(400).json({ error: "invalid_user" });
 
-    const accessToken = signAccessToken(user.id);
-    const idToken = signIdToken(user, client_id);
-    const refreshToken = await createRefreshToken(user.id, client_id);
+    const accessToken = signAccessToken(user.id, client_id, authCode.scopes);
+    const idToken = signIdToken(user, client_id, authCode.nonce);
+    const refreshToken = await createRefreshToken(user.id, client_id, authCode.scopes);
 
     return res.json({
       access_token: accessToken,
@@ -219,19 +248,41 @@ export class OidcController {
   ) => {
     const { refresh_token } = req.body;
 
+    if (typeof refresh_token !== "string") {
+      return res.status(400).json({ error: "invalid_request" });
+    }
+
+    const refreshTokenHash = hashOpaqueToken(refresh_token);
+
     const [stored] = await db
       .select()
       .from(refreshTokensTable)
-      .where(eq(refreshTokensTable.token, refresh_token));
+      .where(eq(refreshTokensTable.token, refreshTokenHash));
 
-    if (!stored || stored.used || new Date() > stored.expiresAt) {
+    if (
+      !stored ||
+      stored.clientId !== client_id ||
+      stored.used ||
+      stored.revokedAt ||
+      new Date() > stored.expiresAt
+    ) {
       return res.status(400).json({ error: "invalid_grant" });
     }
 
-    await db
+    const consumedRefreshTokens = await db
       .update(refreshTokensTable)
       .set({ used: true })
-      .where(eq(refreshTokensTable.token, refresh_token));
+      .where(
+        and(
+          eq(refreshTokensTable.token, refreshTokenHash),
+          eq(refreshTokensTable.used, false),
+        ),
+      )
+      .returning({ token: refreshTokensTable.token });
+
+    if (consumedRefreshTokens.length === 0) {
+      return res.status(400).json({ error: "invalid_grant" });
+    }
 
     const [user] = await db
       .select()
@@ -240,12 +291,20 @@ export class OidcController {
 
     if (!user) return res.status(400).json({ error: "invalid_user" });
 
-    const accessToken = signAccessToken(user.id);
-    const idToken = signIdToken(user, stored.clientId ?? "self");
+    const scope = normalizeScopes(stored.scopes);
+    const accessToken = signAccessToken(user.id, client_id, scope);
+    const idToken = signIdToken(user, client_id);
     const newRefreshToken = await createRefreshToken(
       user.id,
-      stored.clientId ?? null,
+      client_id,
+      scope,
     );
+    const newRefreshTokenHash = hashOpaqueToken(newRefreshToken);
+
+    await db
+      .update(refreshTokensTable)
+      .set({ replacedBy: newRefreshTokenHash })
+      .where(eq(refreshTokensTable.token, refreshTokenHash));
 
     return res.json({
       access_token: accessToken,
@@ -259,6 +318,14 @@ export class OidcController {
   revoke = async (req: Request, res: Response) => {
     const { token, client_id, client_secret } = req.body;
 
+    if (
+      typeof token !== "string" ||
+      typeof client_id !== "string" ||
+      typeof client_secret !== "string"
+    ) {
+      return res.status(400).json({ error: "invalid_request" });
+    }
+
     const [client] = await db
       .select()
       .from(oauthClientsTable)
@@ -269,14 +336,19 @@ export class OidcController {
       .update(client_secret)
       .digest("hex");
 
-    if (!client || hashed !== client.secret) {
+    if (!client || !safeEqualString(hashed, client.secret)) {
       return res.status(401).json({ error: "invalid_client" });
     }
 
     await db
       .update(refreshTokensTable)
-      .set({ used: true })
-      .where(eq(refreshTokensTable.token, token));
+      .set({ used: true, revokedAt: new Date() })
+      .where(
+        and(
+          eq(refreshTokensTable.token, hashOpaqueToken(token)),
+          eq(refreshTokensTable.clientId, client_id),
+        ),
+      );
 
     return res.json({ ok: true });
   };

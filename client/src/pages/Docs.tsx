@@ -52,16 +52,15 @@ const edgeCases = [
   'Authorize GET rejects unknown client_id and unregistered redirect_uri.',
   'Token endpoint rejects invalid client_id/client_secret.',
   'Unsupported grant_type and response_type are rejected.',
+  'Token exchange binds code to client_id, redirect_uri, and PKCE verifier.',
+  'Refresh token rotation verifies ownership against requesting client_id.',
+  'Hosted consent re-checks client, redirect URI, scope, and PKCE challenge.',
 ]
 
 const knownGaps = [
-  'Token exchange does not verify auth code clientId against requesting client_id.',
-  'Refresh flow does not verify refresh token ownership against requesting client_id.',
-  'POST /o/3rd-party-client/authorize does not re-check redirect_uri against client allowlist.',
-  'Consent screen reads state/scope but does not submit both consistently to backend.',
   'Deny button currently returns to home, not redirect_uri with access_denied + state.',
-  'No PKCE support for public clients (code_challenge/code_verifier missing).',
-  'No nonce handling for stronger OIDC replay protection in implicit threat models.',
+  'Email verification and account recovery flows are still placeholders.',
+  'Refresh token reuse detection currently rejects reused tokens but does not revoke the whole token family.',
 ]
 
 const Docs = () => {
@@ -146,7 +145,7 @@ const Docs = () => {
           </div>
           <div className="border-2 border-border bg-background p-4">
             <p className="font-heading uppercase">3. Redirect user to authorize endpoint</p>
-            <p>Use `GET /o/3rd-party-client/authorize` with `client_id`, `redirect_uri`, `response_type=code`, `scope`, and `state`.</p>
+            <p>Use `GET /o/3rd-party-client/authorize` with `client_id`, `redirect_uri`, `response_type=code`, `scope`, `state`, `nonce`, and PKCE S256 parameters.</p>
           </div>
           <div className="border-2 border-border bg-background p-4">
             <p className="font-heading uppercase">4. User authenticates + consents</p>
@@ -154,7 +153,7 @@ const Docs = () => {
           </div>
           <div className="border-2 border-border bg-background p-4">
             <p className="font-heading uppercase">5. Exchange code on your backend</p>
-            <p>Call `POST /o/token` with `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`, and `client_secret`.</p>
+            <p>Call `POST /o/token` with `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`, `client_secret`, and `code_verifier`.</p>
           </div>
           <div className="border-2 border-border bg-background p-4">
             <p className="font-heading uppercase">6. Call userinfo and maintain session</p>
@@ -211,7 +210,10 @@ const Docs = () => {
   &redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback
   &response_type=code
   &scope=openid%20email%20profile
-  &state=RANDOM_CSRF_TOKEN`}
+  &state=RANDOM_CSRF_TOKEN
+  &nonce=RANDOM_NONCE
+  &code_challenge=BASE64URL_SHA256_VERIFIER
+  &code_challenge_method=S256`}
             </pre>
           </div>
           <div className="space-y-2 border-2 border-border bg-background p-4">
@@ -225,7 +227,8 @@ Content-Type: application/json
   "client_id": "CLIENT_ID",
   "client_secret": "CLIENT_SECRET",
   "code": "AUTH_CODE",
-  "redirect_uri": "https://app.example.com/callback"
+  "redirect_uri": "https://app.example.com/callback",
+  "code_verifier": "ORIGINAL_PKCE_VERIFIER"
 }`}
             </pre>
           </div>
