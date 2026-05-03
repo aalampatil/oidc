@@ -38,9 +38,8 @@ oidc/
 │   └── .env
 │
 └── server/                          # Bun + Express backend
-    ├── cert/                        # RSA key pair (generated via key-gen.sh)
-    │   ├── private-key.pem
-    │   └── public-key.pub
+    ├── cert/                        # Local RSA key pair, ignored by Git
+    │   └── .gitkeep
     ├── drizzle/                     # Drizzle migration files
     ├── src/
     │   ├── db/
@@ -63,9 +62,9 @@ oidc/
     │   │   ├── user-token.ts        # JWTClaims type
     │   │   └── env.ts               # Environment variable validation
     │   └── index.ts                 # App entry point
-    ├── .env
+    ├── .env                         # Local only, ignored by Git
     ├── .env.example
-    ├── .env.production
+    ├── .env.production              # Local only, ignored by Git
     ├── docker-compose.yml
     ├── Dockerfile
     ├── drizzle.config.js
@@ -87,7 +86,8 @@ oidc/
        │  client/authorize       │                             │
        │  ?client_id=&           │                             │
        │  redirect_uri=&         │                             │
-       │  response_type=code     │                             │
+       │  response_type=code&    │                             │
+       │  code_challenge=...     │                             │
        │────────────────────────>│                             │
        │                         │                             │
        │                         │  2. Validate client,        │
@@ -109,7 +109,8 @@ oidc/
        │<────────────────────────────────────────────────────── │
        │                         │                             │
        │  6. POST /o/token       │                             │
-       │  { code, client_secret }│                             │
+       │  { code, client_secret, │                             │
+       │    code_verifier }      │                             │
        │────────────────────────>│                             │
        │                         │                             │
        │  { access_token,        │                             │
@@ -187,6 +188,8 @@ chmod +x key-gen.sh
 ```
 
 This creates `cert/private-key.pem` and `cert/public-key.pub` used for signing JWTs.
+
+These files are intentionally ignored by Git. Do not commit private signing keys.
 
 ### 3. Configure Environment Variables
 
@@ -287,12 +290,31 @@ Response:
 Redirect your users to the authorization endpoint:
 
 ```js
+function base64UrlEncode(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+const codeVerifier = base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
+const digest = await crypto.subtle.digest(
+  "SHA-256",
+  new TextEncoder().encode(codeVerifier),
+);
+const codeChallenge = base64UrlEncode(digest);
+
+// Store codeVerifier in the user's session. You need it during token exchange.
+
 const params = new URLSearchParams({
   client_id: "YOUR_CLIENT_ID",
   redirect_uri: "http://localhost:5500/callback.html",
   response_type: "code",
   scope: "openid email profile",
   state: crypto.randomUUID(), // CSRF protection
+  nonce: crypto.randomUUID(), // ID token replay protection
+  code_challenge: codeChallenge,
+  code_challenge_method: "S256",
 });
 
 window.location.href = `http://localhost:3000/o/3rd-party-client/authorize?${params}`;
@@ -313,7 +335,8 @@ Content-Type: application/json
   "code": "received_code_here",
   "client_id": "YOUR_CLIENT_ID",
   "client_secret": "YOUR_CLIENT_SECRET",
-  "redirect_uri": "http://localhost:5500/callback.html"
+  "redirect_uri": "http://localhost:5500/callback.html",
+  "code_verifier": "original_pkce_code_verifier"
 }
 ```
 
@@ -352,11 +375,29 @@ Refresh tokens are **rotated on every use** — the old token is invalidated and
 
 ## Security Notes
 
-- Passwords are hashed with **SHA-256 + random salt** — plain passwords are never stored
+- Passwords are hashed with **scrypt + random salt** — plain passwords are never stored
+- Legacy SHA-256 password hashes are still accepted so existing users can log in
 - JWTs are signed with **RS256** (asymmetric keys) — consumers verify tokens via the JWKS endpoint without contacting this server
+- Authorization code flow requires **PKCE S256**
+- ID tokens include the authorization request `nonce` when provided
 - Auth codes are **single-use** and expire in **10 minutes**
-- Refresh tokens are **rotated** on every use
+- Refresh tokens are stored hashed, client-bound, single-use, and **rotated** on every use
+- Redirect URIs must exactly match a registered URI; HTTPS is required except localhost HTTP
+- Requested scopes must be allowed by the registered client
 - `client_secret` is stored as a SHA-256 hash — the plain secret is shown only once at registration
+
+## Production Notes
+
+- Keep `.env`, `.env.production`, `cert/private-key.pem`, and `cert/public-key.pub` out of Git.
+- Rotate signing keys if a private key was ever committed or exposed.
+- Use `ISSUER_URL` as the public HTTPS issuer URL in production.
+- Run production migrations with:
+
+```bash
+bun run db:migrate:prod
+```
+
+- Existing refresh tokens created before hashed-token storage are invalid after the production hardening migration.
 
 ---
 
