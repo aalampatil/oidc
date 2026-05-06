@@ -1,10 +1,13 @@
 import { z } from "zod";
+
 const envSchema = z.object({
   PORT: z.string().optional(),
   DATABASE_URL: z.string(),
   ISSUER_URL: z.string(),
   CLIENT: z.string(),
   SERVER: z.string(),
+  PRIVATE_KEY: z.string(),
+  PUBLIC_KEY: z.string(),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {
