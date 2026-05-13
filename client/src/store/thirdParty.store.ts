@@ -54,6 +54,20 @@ type ThirdPartyState = {
   clearError: () => void;
 };
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (!axios.isAxiosError(error)) return fallback;
+
+  const data = error.response?.data;
+  if (typeof data === "string") return data;
+  if (data && typeof data === "object") {
+    const responseData = data as { message?: unknown; error?: unknown };
+    if (typeof responseData.message === "string") return responseData.message;
+    if (typeof responseData.error === "string") return responseData.error;
+  }
+
+  return fallback;
+};
+
 export const useThirdPartyStore = create<ThirdPartyState>()(
   persist(
     (set, get) => ({
@@ -87,10 +101,7 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
           });
           return data;
         } catch (error) {
-          const message = axios.isAxiosError(error)
-            ? ((error.response?.data?.message as string | undefined) ??
-              "Client registration failed.")
-            : "Client registration failed.";
+          const message = getErrorMessage(error, "Client registration failed.");
           set({ loading: false, error: message });
           return null;
         }
@@ -105,10 +116,7 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
           set({ clientMeta: data, loading: false });
           return data;
         } catch (error) {
-          const message = axios.isAxiosError(error)
-            ? ((error.response?.data?.error as string | undefined) ??
-              "Failed to fetch client info.")
-            : "Failed to fetch client info.";
+          const message = getErrorMessage(error, "Failed to fetch client info.");
           set({ loading: false, error: message });
           return null;
         }
@@ -121,11 +129,7 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
           set({ loading: false });
           return data;
         } catch (error) {
-          const message = axios.isAxiosError(error)
-            ? ((error.response?.data?.message as string | undefined) ??
-              (error.response?.data?.error as string | undefined) ??
-              "Authorization failed.")
-            : "Authorization failed.";
+          const message = getErrorMessage(error, "Authorization failed.");
           set({ loading: false, error: message });
           return false;
         }

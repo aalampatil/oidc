@@ -1,8 +1,66 @@
-import React from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
+import { API_BASE_URL } from '@/configs/axiosApi'
+import { createDemoNonce, createPkcePair, saveDemoFlowSession } from '@/lib/demoFlow'
+import { useThirdPartyStore } from '@/store/thirdParty.store'
 
 const Hero = () => {
+  const registerClient = useThirdPartyStore((state) => state.registerClient)
+  const [demoLoading, setDemoLoading] = useState(false)
+  const [demoError, setDemoError] = useState<string | null>(null)
+
+  const handleRunDemoFlow = async () => {
+    if (demoLoading) return
+
+    setDemoLoading(true)
+    setDemoError(null)
+
+    try {
+      const redirectUri = `${window.location.origin}/demo/callback`
+      const { codeVerifier, codeChallenge } = await createPkcePair()
+      const state = createDemoNonce()
+      const nonce = createDemoNonce()
+      const registration = await registerClient({
+        name: 'OIDC Demo Console',
+        redirectUris: [redirectUri],
+        scopes: 'openid email profile',
+      })
+
+      if (!registration) {
+        setDemoError(useThirdPartyStore.getState().error ?? 'Could not create the demo client.')
+        return
+      }
+
+      saveDemoFlowSession({
+        clientId: registration.clientId,
+        clientSecret: registration.clientSecret,
+        redirectUri,
+        codeVerifier,
+        state,
+        nonce,
+        createdAt: new Date().toISOString(),
+      })
+
+      const params = new URLSearchParams({
+        client_id: registration.clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: 'openid email profile',
+        state,
+        nonce,
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256',
+      })
+
+      window.location.href = `${API_BASE_URL}/o/3rd-party-client/authorize?${params.toString()}`
+    } catch {
+      setDemoError('Demo flow could not start. Check that the auth server is running.')
+    } finally {
+      setDemoLoading(false)
+    }
+  }
+
   return (
     <section className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 py-16 md:gap-14 md:px-10 md:py-20">
       <div className="inline-flex w-fit items-center gap-2 border-2 border-border bg-secondary-background px-4 py-1 text-xs font-heading uppercase tracking-wide shadow-shadow">
@@ -74,7 +132,15 @@ const Hero = () => {
               </div>
             </div>
 
-            <Button className="w-full" variant="reverse">Run Demo Flow</Button>
+            {demoError ? (
+              <p className="border-2 border-border bg-chart-3 px-3 py-2 text-xs font-heading uppercase">
+                {demoError}
+              </p>
+            ) : null}
+
+            <Button className="w-full" variant="reverse" onClick={handleRunDemoFlow} disabled={demoLoading}>
+              {demoLoading ? 'Starting Demo Flow...' : 'Run Demo Flow'}
+            </Button>
           </div>
         </div>
       </div>

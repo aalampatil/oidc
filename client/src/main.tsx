@@ -11,6 +11,7 @@ import AccountPage from './pages/AccountPage'
 import ConsentScreen from './pages/ConsentScreen'
 import Docs from './pages/Docs'
 import Protected from './configs/protected'
+import DemoCallback from './pages/DemoCallback'
 
 const router = createBrowserRouter([
   {
@@ -45,6 +46,10 @@ const router = createBrowserRouter([
       {
         path: "docs",
         element: <Docs />
+      },
+      {
+        path: "demo/callback",
+        element: <DemoCallback />
       },
 
     ]
