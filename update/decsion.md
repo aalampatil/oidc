@@ -116,4 +116,14 @@ Date: 2026-11-01
 - Confirmed the actual production build rejects the original malformed value before bundle generation.
 - Corrected the local production value and reran all 11 UI tests and the TypeScript/Vite production build successfully.
 - The application-side fix and decision log are committed as a separate major change. The local `.env.production` remains ignored and is not included in that commit.
-- Vercel identified the `oidc` project, but access to its owning team was denied with HTTP 403. A team-access authorization link was requested and provided to the user. Updating the live environment and redeploying remain pending that authorization; the public production website has not yet been repaired by these local changes alone.
+- Initially, Vercel identified the `oidc` project but denied team access with HTTP 403. The local change alone did not repair production. The user subsequently approved team access, enabling the recovery recorded below.
+
+### Production recovery after team authorization
+
+- Updated the existing Vercel `VITE_API_BASE_URL` variable to `https://oidc-server.aalampatil.online`. Retained its existing sensitive storage type and its shared production/preview targets.
+- Rebuilt the existing production source revision, `78df38c3d2fd3d723c07eb8d940e97e07d90b9ff`, with the corrected environment. This repaired configuration without introducing a different source revision into the release.
+- Deployment `dpl_7XUN37kDKtJ5DdPTBNbEtg4zgiuy` reached `READY`, with no alias error, and was assigned to `oidc-ap.aalampatil.online`.
+- Read-only verification of `https://oidc-ap.aalampatil.online` returned HTTP 200 and referenced the new `/assets/index-Bp9Q0FHE.js` asset.
+- That JavaScript asset returned HTTP 200. Its startup configuration contains the complete HTTPS issuer and no longer contains the schemeless issuer invocation that caused the crash.
+- The preventive build-validation change remains committed locally as `398dabe`; it was not part of this configuration-only redeployment and must be included in a subsequent source release to enforce validation there.
+- Verification covered deployment status, domain assignment, HTML delivery, and actual public bundle configuration. A real browser render and production authentication flow were not exercised by these checks.
