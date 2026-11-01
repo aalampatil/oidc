@@ -62,3 +62,7 @@ When the user approves access, the frontend forwards those values to the provide
 Production builds validate the issuer before emitting browser assets. Include the scheme, for example `https://oidc-server.aalampatil.online`. A value such as `oidc-server.aalampatil.online` is invalid. Set this in the hosting platform's production environment as well as any local production env file; local ignored files are not automatically uploaded by Git deployments. Updating the variable requires rebuilding and redeploying the frontend.
 
 Browser authentication state, registration metadata, and demo transactions are isolated by issuer. Old unscoped browser data is not imported; sign in again after upgrading. Registration secrets are shown once and are not persisted to local storage. The browser demo temporarily holds demo credentials in session storage and is not a template for a production confidential client.
+
+## Vercel routing
+
+Deploy the frontend with `client/` as the Vercel project root. `client/vercel.json` rewrites SPA requests to `index.html` so direct visits, refreshes, and OAuth redirects to `/consent` and `/demo/callback` reach React Router. Existing built assets continue to be served normally. Without this fallback, local Vite navigation can work while production authorization redirects fail with Vercel 404 responses.

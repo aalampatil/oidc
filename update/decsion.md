@@ -138,3 +138,29 @@ Date: 2026-11-01
 - Added LF attributes for hook scripts, ignored generated hook internals, and documented installation and manual checks in the root README.
 - Verified Git uses `.husky/_` as its hooks path. An initial invalid TypeScript check blocked the hook as expected; after correcting the command to use the active project configuration, `git hook run pre-commit` passed all 48 tests and both packages' type checks.
 - The hook does not run database integration tests, contact production, rewrite source files, or stage files automatically.
+
+## Follow-up: production demo cannot open consent or callback
+
+Date: 2026-11-01
+
+### Issue and cause
+
+- The supplied production authorization URL reached `/consent`, but Vercel returned HTTP 404 before React Router could handle the page.
+- Independent read-only checks also returned HTTP 404 for `/demo/callback` and `/docs`. Local Vite navigation hid the missing production SPA fallback.
+- This failure occurs at frontend routing, before login or token exchange. Changing client secrets, redirect matching, PKCE, or CORS would not repair it.
+
+### Changes
+
+- Added `client/vercel.json` with Vercel's documented SPA rewrite to `/index.html`, making the fallback reproducible in future frontend deployments.
+- Documented that `client/` is the frontend deployment root and explained why consent and callback redirects need the SPA fallback.
+- Prepared an equivalent Vercel project route for the existing application page paths only. This lets the current production deployment serve consent and callback without changing its source revision, API routing, or static asset paths.
+- The Husky setup was completed and committed separately as `ef1b37d` before this routing change.
+
+### Validation
+
+- The production build passed with the tracked routing configuration.
+- Published Vercel route version `e6bd9980-676c-4199-a760-8930f5fa69db` containing the page rewrite rule. The project previously had no configured routing rules.
+- Verified the exact supplied consent URL now returns HTTP 200 with the React application HTML. `/demo/callback` and `/docs` also return HTTP 200 with the same application shell.
+- Verified `/assets/index-Bp9Q0FHE.js` still returns HTTP 200 with `application/javascript`, rather than being rewritten to HTML.
+- This repairs the observed production routing failure. A real browser login and token exchange were not performed; the user should start a fresh demo from the landing page so its state, nonce, and PKCE session are present.
+- The immediate live fix uses Vercel project routing. The committed `client/vercel.json` provides the same SPA fallback for future source deployments; it has not yet been included in a new source deployment.
