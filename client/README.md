@@ -2,6 +2,8 @@
 
 React + Vite frontend for the custom OIDC provider.
 
+For a locally running application using a production provider, see the [cross-environment integration guide](../docs/oidc-integration.md). This UI is the provider's hosted sign-in/consent application; third-party applications normally integrate through redirects and a backend OIDC client.
+
 This app provides:
 
 - User registration and login screens
@@ -54,3 +56,7 @@ The consent page expects authorization requests to include:
 - `code_challenge_method=S256`
 
 When the user approves access, the frontend forwards those values to the provider backend. The third-party app must later exchange the returned authorization code from its backend using the original PKCE `code_verifier`.
+
+`VITE_API_BASE_URL` is the exact issuer, not the local application's callback URL. Set it to the production provider to use that provider from a local UI, and explicitly allow the UI origin in the provider's `CORS_ALLOWED_ORIGINS`. Rebuild for production configuration changes. Production initialization requires an explicit issuer; development alone defaults to localhost.
+
+Browser authentication state, registration metadata, and demo transactions are isolated by issuer. Old unscoped browser data is not imported; sign in again after upgrading. Registration secrets are shown once and are not persisted to local storage. The browser demo temporarily holds demo credentials in session storage and is not a template for a production confidential client.

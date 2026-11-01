@@ -2,6 +2,8 @@
 
 A from-scratch implementation of an **OpenID Connect (OIDC) Identity Provider** built with Bun + Express on the backend and React on the frontend. This project lets you understand how OAuth 2.0 and OIDC work under the hood by building the actual authorization server yourself.
 
+See the [cross-environment integration guide](../docs/oidc-integration.md) for localhost applications authenticating against a deployed provider, configuration examples, CORS policy, security requirements, and troubleshooting. The [decision log](../update/decsion.md) records the investigation and refactor.
+
 ---
 
 ## What is this?
@@ -205,9 +207,11 @@ cp .env.example .env
 
 ```env
 PORT=3000
+NODE_ENV=development
 DATABASE_URL=postgresql://ADMIN:ADMIN@localhost:5434/oidc_auth
 ISSUER_URL=http://localhost:3000
-CLIENT=http://localhost:5173
+CONSENT_UI_URL=http://localhost:5173
+CORS_ALLOWED_ORIGINS=
 SERVER=http://localhost:3000
 ```
 
