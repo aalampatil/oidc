@@ -59,4 +59,6 @@ When the user approves access, the frontend forwards those values to the provide
 
 `VITE_API_BASE_URL` is the exact issuer, not the local application's callback URL. Set it to the production provider to use that provider from a local UI, and explicitly allow the UI origin in the provider's `CORS_ALLOWED_ORIGINS`. Rebuild for production configuration changes. Production initialization requires an explicit issuer; development alone defaults to localhost.
 
+Production builds validate the issuer before emitting browser assets. Include the scheme, for example `https://oidc-server.aalampatil.online`. A value such as `oidc-server.aalampatil.online` is invalid. Set this in the hosting platform's production environment as well as any local production env file; local ignored files are not automatically uploaded by Git deployments. Updating the variable requires rebuilding and redeploying the frontend.
+
 Browser authentication state, registration metadata, and demo transactions are isolated by issuer. Old unscoped browser data is not imported; sign in again after upgrading. Registration secrets are shown once and are not persisted to local storage. The browser demo temporarily holds demo credentials in session storage and is not a template for a production confidential client.

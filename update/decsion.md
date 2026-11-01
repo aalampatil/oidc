@@ -91,3 +91,29 @@ No database migration, production credential copying, or signing-key rotation is
 - `08d8747` — Provider configuration, strict CORS/redirect policy, issuer responses, and cross-environment verification.
 - `bfcc37f` — Client issuer isolation, required callback issuer checks, safer registration storage, and UI integration guidance.
 - The integration guide, environment examples, README updates, and this decision log are committed together as a separate documentation change; see Git history for that commit's hash.
+
+## Follow-up: production website renders a blank page
+
+Date: 2026-11-01
+
+### Issue and evidence
+
+- The frontend at `https://oidc-ap.aalampatil.online` returned HTTP 200 from Vercel and referenced `/assets/index-XG0u3Ijx.js`; this was a browser startup failure rather than a missing HTML page.
+- Read-only inspection of the deployed public JavaScript confirmed that issuer validation was called with `oidc-server.aalampatil.online`, without `https://`.
+- The previous refactor added strict issuer validation to a module imported before React mounts. A schemeless production value therefore threw an exception before the application could render.
+- The existing production build did not execute that browser module and incorrectly succeeded. The earlier successful build checks did not cover runtime initialization with the actual production issuer configuration.
+- The local ignored `client/.env.production` contained the same malformed value. It was corrected locally to `VITE_API_BASE_URL=https://oidc-server.aalampatil.online`.
+
+### Change and decision
+
+- Keep strict issuer validation; do not guess an insecure scheme or fall back to localhost in production.
+- Load Vite's selected-mode environment in `client/vite.config.ts` and validate the issuer before emitting a production bundle.
+- Add `client/tests/productionBuild.test.ts` to reproduce the exact schemeless-host failure at build configuration time and verify that the HTTPS form is accepted.
+- Document that the production hosting environment must contain the complete HTTPS URL, and that a rebuild/redeployment is required when it changes.
+
+### Validation and deployment status
+
+- Confirmed the actual production build rejects the original malformed value before bundle generation.
+- Corrected the local production value and reran all 11 UI tests and the TypeScript/Vite production build successfully.
+- The application-side fix and decision log are committed as a separate major change. The local `.env.production` remains ignored and is not included in that commit.
+- Vercel identified the `oidc` project, but access to its owning team was denied with HTTP 403. A team-access authorization link was requested and provided to the user. Updating the live environment and redeploying remain pending that authorization; the public production website has not yet been repaired by these local changes alone.

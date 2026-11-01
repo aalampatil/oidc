@@ -104,7 +104,7 @@ The built-in browser demo exercises endpoints and temporarily keeps its demo flo
 
 ## Switching the provider UI between issuers
 
-Set `VITE_API_BASE_URL` and restart the Vite dev server, or rebuild the deployed UI. A local issuer is the default only in development; a production UI without an explicit issuer fails during initialization instead of silently contacting localhost.
+Set `VITE_API_BASE_URL` and restart the Vite dev server, or rebuild the deployed UI. A local issuer is the default only in development. Vite validates the issuer before building production assets, so a missing or malformed value cannot silently become a successful blank-page deployment. Configure it in the hosting platform's production environment too; ignored local env files are not part of Git-based deployments.
 
 Auth state, saved registration metadata, and demo transactions now use issuer-specific storage keys. Old unscoped browser state is intentionally not imported because its issuer cannot be established safely. Sign in again and register or securely record clients against the intended provider. Existing provider database rows, credentials, and signing keys are unchanged; no database migration is needed for this refactor.
 
