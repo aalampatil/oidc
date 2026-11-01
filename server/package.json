@@ -20,6 +20,7 @@
     "build": "tsc",
     "start": "bun run src/index.ts",
     "test": "bun test src",
+    "typecheck": "tsc --noEmit",
     "test:integration": "bun run scripts/check-cross-environment.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",

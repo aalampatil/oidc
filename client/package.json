@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "bun test tests",
+    "typecheck": "tsc -p tsconfig.json --incremental --tsBuildInfoFile node_modules/.tmp/tsconfig.check.tsbuildinfo --noEmit && tsc -p tsconfig.node.json --incremental --noEmit",
     "preview": "vite preview"
   },
   "dependencies": {

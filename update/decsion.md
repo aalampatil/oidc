@@ -127,3 +127,14 @@ Date: 2026-11-01
 - That JavaScript asset returned HTTP 200. Its startup configuration contains the complete HTTPS issuer and no longer contains the schemeless issuer invocation that caused the crash.
 - The preventive build-validation change remains committed locally as `398dabe`; it was not part of this configuration-only redeployment and must be included in a subsequent source release to enforce validation there.
 - Verification covered deployment status, domain assignment, HTML delivery, and actual public bundle configuration. A real browser render and production authentication flow were not exercised by these checks.
+
+## Repository Git hooks
+
+Date: 2026-11-01
+
+- Added Husky 9.1.7 as a root development dependency with a root Bun lockfile and `prepare` script. The client and server retain independent package installations.
+- Added `.husky/pre-commit` to run the shared `bun run check` command: client/server unit tests and their TypeScript checks.
+- Used the client's active `tsconfig.json` for application checks and `tsconfig.node.json` for Vite configuration checks. TypeScript caches are written under `node_modules` rather than to tracked files.
+- Added LF attributes for hook scripts, ignored generated hook internals, and documented installation and manual checks in the root README.
+- Verified Git uses `.husky/_` as its hooks path. An initial invalid TypeScript check blocked the hook as expected; after correcting the command to use the active project configuration, `git hook run pre-commit` passed all 48 tests and both packages' type checks.
+- The hook does not run database integration tests, contact production, rewrite source files, or stage files automatically.

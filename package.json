@@ -1,0 +1,14 @@
+{
+  "name": "oidc-development-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare": "husky",
+    "check": "bun run check:client && bun run check:server",
+    "check:client": "bun run --cwd client test && bun run --cwd client typecheck",
+    "check:server": "bun run --cwd server test && bun run --cwd server typecheck"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
