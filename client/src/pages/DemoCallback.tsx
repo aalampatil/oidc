@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import axios from 'axios'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { getApiErrorMessage } from '@/lib/apiError'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { authApi } from '@/configs/axiosApi'
@@ -37,8 +37,11 @@ const DemoCallback = () => {
   const [loading, setLoading] = useState(true)
 
   const session = useMemo(() => readDemoFlowSession(), [])
+  // Share the one-time exchange across StrictMode's effect setup/cleanup cycle.
+  const exchangeRequest = useRef<Promise<{ tokens: TokenResponse; userInfo: UserInfoResponse }> | null>(null)
 
   useEffect(() => {
+    let active = true
     const exchangeCode = async () => {
       if (!code) {
         setError('Missing authorization code in callback URL.')
@@ -59,38 +62,40 @@ const DemoCallback = () => {
       }
 
       try {
-        const { data } = await authApi.post<TokenResponse>('/token', {
-          grant_type: 'authorization_code',
-          client_id: session.clientId,
-          client_secret: session.clientSecret,
-          code,
-          redirect_uri: session.redirectUri,
-          code_verifier: session.codeVerifier,
-        })
+        exchangeRequest.current ??= (async () => {
+          const { data } = await authApi.post<TokenResponse>('/token', {
+            grant_type: 'authorization_code',
+            client_id: session.clientId,
+            client_secret: session.clientSecret,
+            code,
+            redirect_uri: session.redirectUri,
+            code_verifier: session.codeVerifier,
+          })
 
-        setTokens(data)
+          const userInfoResponse = await authApi.get<UserInfoResponse>('/userinfo', {
+            headers: {
+              Authorization: `${data.token_type} ${data.access_token}`,
+            },
+          })
 
-        const userInfoResponse = await authApi.get<UserInfoResponse>('/userinfo', {
-          headers: {
-            Authorization: `${data.token_type} ${data.access_token}`,
-          },
-        })
-
-        setUserInfo(userInfoResponse.data)
-        clearDemoFlowSession()
+          clearDemoFlowSession()
+          return { tokens: data, userInfo: userInfoResponse.data }
+        })()
+        const result = await exchangeRequest.current
+        if (!active) return
+        setTokens(result.tokens)
+        setUserInfo(result.userInfo)
       } catch (exchangeError) {
-        const message = axios.isAxiosError(exchangeError)
-          ? ((exchangeError.response?.data?.message as string | undefined) ??
-            (exchangeError.response?.data?.error as string | undefined) ??
-            'Demo token exchange failed.')
-          : 'Demo token exchange failed.'
+        if (!active) return
+        const message = getApiErrorMessage(exchangeError, 'Demo token exchange failed.')
         setError(message)
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
 
     void exchangeCode()
+    return () => { active = false }
   }, [code, session, state])
 
   return (
@@ -104,11 +109,11 @@ const DemoCallback = () => {
 
           <h1 className="text-4xl leading-tight md:text-6xl">
             Authorization
-            <span className="ml-2 bg-main px-2 text-main-foreground">Complete</span>
+            <span className="ml-2 bg-main px-2 text-main-foreground">{loading ? 'In progress' : error ? 'Failed' : 'Complete'}</span>
           </h1>
 
           <p className="max-w-xl text-base md:text-lg">
-            The demo client received an authorization code, exchanged it with PKCE, and called userinfo with the access token.
+            {loading ? 'Verifying the authorization response and exchanging the code for tokens.' : error ? 'The demo could not complete. Review the error below and start a new flow.' : 'The demo client exchanged an authorization code with PKCE and retrieved your identity using the access token.'}
           </p>
 
           <div className="grid max-w-xl grid-cols-2 gap-3">
@@ -135,7 +140,7 @@ const DemoCallback = () => {
             ) : null}
 
             {error ? (
-              <p className="border-2 border-border bg-chart-3 px-3 py-2 text-xs font-heading uppercase">
+              <p role="alert" className="border-2 border-border bg-chart-3 px-3 py-2 text-xs font-heading uppercase">
                 {error}
               </p>
             ) : null}

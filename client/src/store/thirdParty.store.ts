@@ -1,4 +1,4 @@
-import axios from "axios";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { thirdPartyApi } from "@/configs/axiosApi";
@@ -54,20 +54,6 @@ type ThirdPartyState = {
   clearError: () => void;
 };
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (!axios.isAxiosError(error)) return fallback;
-
-  const data = error.response?.data;
-  if (typeof data === "string") return data;
-  if (data && typeof data === "object") {
-    const responseData = data as { message?: unknown; error?: unknown };
-    if (typeof responseData.message === "string") return responseData.message;
-    if (typeof responseData.error === "string") return responseData.error;
-  }
-
-  return fallback;
-};
-
 export const useThirdPartyStore = create<ThirdPartyState>()(
   persist(
     (set, get) => ({
@@ -101,7 +87,7 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
           });
           return data;
         } catch (error) {
-          const message = getErrorMessage(error, "Client registration failed.");
+          const message = getApiErrorMessage(error, "Client registration failed. Check that the authentication server and database are running.");
           set({ loading: false, error: message });
           return null;
         }
@@ -116,7 +102,7 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
           set({ clientMeta: data, loading: false });
           return data;
         } catch (error) {
-          const message = getErrorMessage(error, "Failed to fetch client info.");
+          const message = getApiErrorMessage(error, "Failed to fetch client info.");
           set({ loading: false, error: message });
           return null;
         }
@@ -129,7 +115,7 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
           set({ loading: false });
           return data;
         } catch (error) {
-          const message = getErrorMessage(error, "Authorization failed.");
+          const message = getApiErrorMessage(error, "Authorization failed.");
           set({ loading: false, error: message });
           return false;
         }
