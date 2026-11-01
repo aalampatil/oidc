@@ -106,6 +106,24 @@ const Docs = () => {
         </div>
       </div>
 
+      <section aria-labelledby="environment-guide" className="space-y-4 border-2 border-border bg-secondary-background p-6 shadow-shadow md:p-8">
+        <h2 id="environment-guide" className="text-2xl font-heading">Local application, hosted identity provider</h2>
+        <p className="text-sm">Your application can run on localhost while authentication stays with the production provider. Register a development client with that provider and use its issuer, discovery document, credentials, token endpoint, and signing keys throughout the flow.</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2 border-2 border-border bg-background p-4">
+            <h3 className="text-sm font-heading">Configure your application's backend</h3>
+            <pre className="overflow-x-auto text-xs">{`OIDC_ISSUER_URL=https://auth.example.com\nOIDC_CLIENT_ID=YOUR_REGISTERED_CLIENT_ID\nOIDC_CLIENT_SECRET=YOUR_SERVER_SIDE_SECRET\nOIDC_REDIRECT_URI=http://localhost:3000/auth/callback`}</pre>
+          </div>
+          <div className="space-y-2 border-2 border-border bg-background p-4">
+            <h3 className="text-sm font-heading">Register an exact callback</h3>
+            <p className="text-sm">HTTP is permitted for localhost and loopback IP callbacks, even with a production issuer. Other callbacks require HTTPS. Hostname, port, path, and query must match the registered URI exactly.</p>
+            <p className="text-sm">The provider's CONSENT_UI_URL points to its hosted sign-in UI, never to your callback.</p>
+          </div>
+        </div>
+        <p className="text-sm">Navigate the browser to authorization, then exchange and verify tokens on your backend. These steps need no CORS allowlist entry. Direct browser API access requires the exact origin in CORS_ALLOWED_ORIGINS. Keep client secrets out of frontend bundles.</p>
+        <p className="text-sm">Production credentials do not work against an unrelated local provider database. To switch providers, select that provider's issuer and separately registered credentials; do not bypass issuer or signature verification.</p>
+      </section>
+
       <div className="border-2 border-border bg-secondary-background p-6 shadow-shadow md:p-8">
         <h2 className="text-2xl font-heading">System Responsibilities</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">

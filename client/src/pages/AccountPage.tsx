@@ -50,8 +50,8 @@ const AccountPage = () => {
                   <p className="mt-1 break-all text-sm">{app.clientId}</p>
                 </div>
                 <div className="border-2 border-border bg-background p-3">
-                  <p className="text-xs font-heading uppercase">Client Secret</p>
-                  <p className="mt-1 break-all text-sm">{app.clientSecret}</p>
+                  <p className="text-xs font-heading uppercase">OIDC Issuer</p>
+                  <p className="mt-1 break-all text-sm">{app.issuer}</p>
                 </div>
               </div>
 

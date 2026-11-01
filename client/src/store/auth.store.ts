@@ -1,7 +1,8 @@
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authApi } from "@/configs/axiosApi";
+import { authApi, OIDC_ISSUER_URL } from "@/configs/axiosApi";
+import { providerStorageKey } from "@/lib/providerConfig";
 
 type RegisterPayload = {
   firstName: string;
@@ -88,8 +89,6 @@ export const useAuthStore = create<AuthState>()(
             "/authenticate/login",
             payload,
           );
-          console.log(data);
-
           set({
             accessToken: data.access_token,
             idToken: data.id_token,
@@ -160,7 +159,7 @@ export const useAuthStore = create<AuthState>()(
         }),
     }),
     {
-      name: "oidc-auth-store",
+      name: providerStorageKey("oidc-auth-store", OIDC_ISSUER_URL),
       partialize: (state) => ({
         accessToken: state.accessToken,
         idToken: state.idToken,

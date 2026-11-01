@@ -1,7 +1,8 @@
 import { getApiErrorMessage } from "@/lib/apiError";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { thirdPartyApi } from "@/configs/axiosApi";
+import { thirdPartyApi, OIDC_ISSUER_URL } from "@/configs/axiosApi";
+import { providerStorageKey } from "@/lib/providerConfig";
 
 type RegisterThirdPartyPayload = {
   name: string;
@@ -10,6 +11,7 @@ type RegisterThirdPartyPayload = {
 };
 
 type RegisterThirdPartyResponse = {
+  issuer?: string;
   clientId: string;
   clientSecret: string;
   message: string;
@@ -42,7 +44,7 @@ type ThirdPartyState = {
     scopes: string;
     redirectUris: string[];
     clientId: string;
-    clientSecret: string;
+    issuer: string;
     createdAt: string;
   }>;
   registerClient: (
@@ -71,12 +73,16 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
             payload,
           );
 
+          if (data.issuer && data.issuer !== OIDC_ISSUER_URL) {
+            throw new Error("Registration issuer does not match the configured provider.");
+          }
+
           const nextTrust = {
             name: payload.name,
             scopes: payload.scopes ?? "openid email profile",
             redirectUris: payload.redirectUris,
             clientId: data.clientId,
-            clientSecret: data.clientSecret,
+            issuer: OIDC_ISSUER_URL,
             createdAt: new Date().toISOString(),
           };
 
@@ -132,13 +138,11 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
       clearError: () => set({ error: null }),
     }),
     {
-      name: "third-party-trust-store",
+      name: providerStorageKey("third-party-trust-store", OIDC_ISSUER_URL),
       partialize: (state) => ({
-        registration: state.registration,
         trustedApps: state.trustedApps,
       }),
     },
   ),
 );
 
-// thirdParty.store.ts — just add these 3 things:

@@ -1,10 +1,8 @@
 import axios from "axios";
+import { resolveProviderIssuer } from "@/lib/providerConfig";
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ??
-  "http://localhost:3000";
-
-console.log(API_BASE_URL);
+export const OIDC_ISSUER_URL = resolveProviderIssuer(import.meta.env.VITE_API_BASE_URL, import.meta.env.DEV);
+export const API_BASE_URL = OIDC_ISSUER_URL.replace(/\/$/, "");
 
 export const authApi = axios.create({
   baseURL: `${API_BASE_URL}/o`,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, ArrowUpRight, Check, CheckCheck, Code2, Fingerprint, KeyRound, Layers3, LockKeyhole, Play, ShieldCheck, SlidersHorizontal, Terminal, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { API_BASE_URL } from '@/configs/axiosApi'
+import { API_BASE_URL, OIDC_ISSUER_URL } from '@/configs/axiosApi'
 import { createDemoNonce, createPkcePair, saveDemoFlowSession } from '@/lib/demoFlow'
 import { useThirdPartyStore } from '@/store/thirdParty.store'
 
@@ -33,6 +33,7 @@ const Hero = () => {
       }
 
       saveDemoFlowSession({
+        issuer: OIDC_ISSUER_URL,
         clientId: registration.clientId,
         clientSecret: registration.clientSecret,
         redirectUri,

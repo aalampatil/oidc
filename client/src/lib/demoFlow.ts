@@ -1,6 +1,10 @@
-const DEMO_FLOW_KEY = "oidc-demo-flow";
+import { OIDC_ISSUER_URL } from "@/configs/axiosApi";
+import { providerStorageKey } from "./providerConfig";
+
+const DEMO_FLOW_KEY = providerStorageKey("oidc-demo-flow", OIDC_ISSUER_URL);
 
 export type DemoFlowSession = {
+  issuer: string;
   clientId: string;
   clientSecret: string;
   redirectUri: string;

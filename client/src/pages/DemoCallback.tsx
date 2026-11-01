@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { authApi } from '@/configs/axiosApi'
+import { authApi, OIDC_ISSUER_URL } from '@/configs/axiosApi'
+import { matchesCallbackIssuer } from '@/lib/providerConfig'
 import { clearDemoFlowSession, readDemoFlowSession } from '@/lib/demoFlow'
 
 type TokenResponse = {
@@ -31,6 +32,7 @@ const DemoCallback = () => {
   const [searchParams] = useSearchParams()
   const code = searchParams.get('code')
   const state = searchParams.get('state')
+  const responseIssuer = searchParams.get('iss')
   const [tokens, setTokens] = useState<TokenResponse | null>(null)
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -57,6 +59,12 @@ const DemoCallback = () => {
 
       if (state !== session.state) {
         setError('State check failed. The callback does not match the demo request.')
+        setLoading(false)
+        return
+      }
+
+      if (!matchesCallbackIssuer(session.issuer, OIDC_ISSUER_URL, responseIssuer)) {
+        setError('Issuer check failed. Start a new demo using the provider that registered this client.')
         setLoading(false)
         return
       }
@@ -96,7 +104,7 @@ const DemoCallback = () => {
 
     void exchangeCode()
     return () => { active = false }
-  }, [code, session, state])
+  }, [code, session, state, responseIssuer])
 
   return (
     <section className="mx-auto flex min-h-[80vh] w-full max-w-7xl items-center px-6 py-16 md:px-10">

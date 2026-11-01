@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { useThirdPartyStore } from '@/store/thirdParty.store'
 import { Link } from 'react-router-dom'
+import { OIDC_ISSUER_URL } from '@/configs/axiosApi'
 
 const TrustForm = () => {
   const registerClient = useThirdPartyStore((state) => state.registerClient)
@@ -20,7 +21,7 @@ const TrustForm = () => {
     const formData = new FormData(event.currentTarget)
 
     const redirectUris = String(formData.get('redirectUris') ?? '')
-      .split(',')
+      .split(/[,\n]/)
       .map((uri) => uri.trim())
       .filter(Boolean)
 
@@ -65,6 +66,7 @@ const TrustForm = () => {
           <div className="absolute -left-3 -top-3 h-full w-full border-2 border-border bg-chart-2" />
           <form onSubmit={handleSubmit} className="relative space-y-4 border-2 border-border bg-secondary-background p-6 shadow-shadow md:p-8">
             <h2 className="text-2xl font-heading">Trust Registration Form</h2>
+            <p className="break-all text-sm">Provider: <strong>{OIDC_ISSUER_URL}</strong>. These credentials belong to this issuer.</p>
 
             <fieldset disabled={loading} className="space-y-4 disabled:opacity-80">
               <div className="space-y-2">
@@ -86,10 +88,10 @@ const TrustForm = () => {
                   name="redirectUris"
                   required
                   rows={3}
-                  placeholder="https://app.example.com/callback"
+                  placeholder={'http://localhost:3000/auth/callback\nhttps://app.example.com/auth/callback'}
                   className="w-full resize-none border-2 border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring"
                 />
-                <p className="text-[10px] uppercase">Use comma-separated URIs if multiple callbacks are needed.</p>
+                <p className="text-xs">One exact callback per line, or separated by commas. HTTP is permitted only for localhost and loopback IPs; all other callbacks require HTTPS. Ports and paths must match exactly.</p>
               </div>
 
               <div className="space-y-2">
@@ -113,9 +115,10 @@ const TrustForm = () => {
               {registration ? (
                 <div className="space-y-2 border-2 border-border bg-background p-3">
                   <p className="text-xs font-heading uppercase">Latest created credentials</p>
+                  <p className="break-all text-sm"><span className="font-heading">Issuer:</span> {registration.issuer ?? OIDC_ISSUER_URL}</p>
                   <p className="text-sm"><span className="font-heading">Client ID:</span> {registration.clientId}</p>
                   <p className="text-sm break-all"><span className="font-heading">Client Secret:</span> {registration.clientSecret}</p>
-                  <p className="text-[10px] uppercase">Save these now. Secret is only shown at creation time.</p>
+                  <p className="text-xs">Copy the secret now and store it on your application's backend. It is not saved to browser storage. Register a separate client for development to keep its credentials independent from your live application.</p>
                 </div>
               ) : null}
 
