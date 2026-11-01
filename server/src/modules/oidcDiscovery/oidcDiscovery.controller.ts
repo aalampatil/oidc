@@ -3,17 +3,19 @@ import jose from "node-jose";
 import { PUBLIC_KEY } from "../../utils/cert";
 import { env } from "../../env";
 
-const ISSUER = env.ISSUER_URL ?? env.SERVER;
+const ISSUER = env.ISSUER_URL;
+const ENDPOINT_BASE = ISSUER.replace(/\/$/, "");
 
 export class OidcDiscoveryController {
   openidConfiguration = (_req: Request, res: Response) => {
     return res.json({
       issuer: ISSUER,
-      authorization_endpoint: `${ISSUER}/o/3rd-party-client/authorize`,
-      token_endpoint: `${ISSUER}/o/token`,
-      userinfo_endpoint: `${ISSUER}/o/userinfo`,
-      jwks_uri: `${ISSUER}/.well-known/jwks.json`,
-      revocation_endpoint: `${ISSUER}/o/revoke`,
+      authorization_endpoint: `${ENDPOINT_BASE}/o/3rd-party-client/authorize`,
+      token_endpoint: `${ENDPOINT_BASE}/o/token`,
+      userinfo_endpoint: `${ENDPOINT_BASE}/o/userinfo`,
+      jwks_uri: `${ENDPOINT_BASE}/.well-known/jwks.json`,
+      revocation_endpoint: `${ENDPOINT_BASE}/o/revoke`,
+      authorization_response_iss_parameter_supported: true,
       response_types_supported: ["code"],
       subject_types_supported: ["public"],
       id_token_signing_alg_values_supported: ["RS256"],

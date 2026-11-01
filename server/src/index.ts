@@ -2,7 +2,7 @@ import "dotenv/config";
 import { env } from "./env.js";
 import express from "express";
 import path from "node:path";
-import cors from "cors";
+import { createProviderCors } from "./utils/http-cors";
 import { oidcRouter } from "./modules/oidcAuth/oidcAuth.routes";
 import { thirdPartyRouter } from "./modules/oauth-3rdparty/3rdparty.routes";
 import { oidcDiscoveryRouter } from "./modules/oidcDiscovery/oidcDiscovery.routes";
@@ -19,18 +19,9 @@ async function main() {
     db.select().from(refreshTokensTable).limit(0),
   ]);
   const app = express();
-  const PORT = env.PORT || 3000;
+  const PORT = env.PORT;
 
-  app.use(
-    cors({
-      origin: [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        env.CLIENT as string,
-      ],
-      methods: ["GET", "POST", "PUT", "DELETE"],
-    }),
-  );
+  app.use(createProviderCors(env.allowedOrigins));
   app.use(express.json());
   app.use(express.static(path.resolve("public")));
   app.use(express.urlencoded({ extended: true }));
@@ -47,7 +38,7 @@ async function main() {
   app.use(apiErrorHandler);
 
   app.listen(PORT, () => {
-    console.log(`server is listening on ${env.SERVER}`);
+    console.log(`Authentication server listening on port ${PORT}; issuer ${env.ISSUER_URL}`);
   });
 }
 

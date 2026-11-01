@@ -54,6 +54,8 @@ export class ThirdPartyController {
     return res.json({
       clientId,
       clientSecret,
+      issuer: env.ISSUER_URL,
+      tokenEndpointAuthMethod: "client_secret_post",
       message: "keep the clientId and clientSecret safe",
     });
   };
@@ -113,7 +115,7 @@ export class ThirdPartyController {
     if (typeof nonce === "string") params.set("nonce", nonce);
     if (typeof state === "string") params.set("state", state);
 
-    return res.redirect(`${env.CLIENT}/consent?${params.toString()}`);
+    return res.redirect(`${env.CONSENT_UI_URL}/consent?${params.toString()}`);
   };
 
   postAuthorize = async (req: Request, res: Response) => {
@@ -189,6 +191,7 @@ export class ThirdPartyController {
 
     const url = new URL(redirect_uri as string);
     url.searchParams.set("code", code);
+    url.searchParams.set("iss", env.ISSUER_URL);
     if (typeof state === "string") url.searchParams.set("state", state);
 
     return res.json({ redirect_url: url.toString() });

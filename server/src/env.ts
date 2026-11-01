@@ -1,19 +1,3 @@
-import { z } from "zod";
+import { parseProviderConfig } from "./provider-config";
 
-const envSchema = z.object({
-  PORT: z.string().optional(),
-  DATABASE_URL: z.string(),
-  ISSUER_URL: z.string(),
-  CLIENT: z.string(),
-  SERVER: z.string(),
-  PRIVATE_KEY: z.string(),
-  PUBLIC_KEY: z.string(),
-});
-
-function createEnv(env: NodeJS.ProcessEnv) {
-  const safeParseResult = envSchema.safeParse(env);
-  if (!safeParseResult.success) throw new Error(safeParseResult.error.message);
-  return safeParseResult.data;
-}
-
-export const env = createEnv(process.env);
+export const env = parseProviderConfig(process.env);

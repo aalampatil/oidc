@@ -8,7 +8,8 @@ import { loadSigningKeys } from "../src/utils/signing-keys";
 // Run against a local server: bun run scripts/check-demo.ts
 const base = process.env.SERVER ?? "http://localhost:3000";
 assert(["localhost", "127.0.0.1"].includes(new URL(base).hostname), "This check is for a local server only.");
-const callback = `${process.env.CLIENT ?? "http://localhost:5173"}/demo/callback`;
+const callback = process.env.DEMO_REDIRECT_URI ?? `${process.env.CLIENT ?? "http://localhost:5173"}/demo/callback`;
+const issuer = process.env.ISSUER_URL!;
 const email = `demo-check-${crypto.randomUUID()}@example.invalid`;
 const password = crypto.randomBytes(24).toString("hex");
 let clientId: string | undefined;
@@ -22,12 +23,24 @@ async function post<T = unknown>(path: string, body: unknown) {
 }
 
 try {
-  const registration = await post<{ clientId: string; clientSecret: string }>("/o/3rd-party-client/register", {
+  const discovery = await fetch(`${base}/.well-known/openid-configuration`, { headers: { Origin: new URL(callback).origin } });
+  assert.equal(discovery.status, 200);
+  assert.equal(discovery.headers.get("access-control-allow-origin"), "*");
+  const metadata = await discovery.json() as Record<string, unknown>;
+  assert.equal(metadata.issuer, issuer);
+  for (const endpoint of ["authorization_endpoint", "token_endpoint", "userinfo_endpoint", "jwks_uri"]) {
+    assert.equal(new URL(String(metadata[endpoint])).origin, new URL(issuer).origin);
+  }
+  assert.equal(metadata.authorization_response_iss_parameter_supported, true);
+  console.log("PASS discovery uses the configured public issuer, independently of the local transport");
+
+  const registration = await post<{ clientId: string; clientSecret: string; issuer: string }>("/o/3rd-party-client/register", {
     name: "OIDC Demo Verification", redirectUris: [callback], scopes: "openid email profile",
   });
   assert.equal(registration.response.status, 200, "Client registration");
   clientId = registration.data.clientId;
   assert(clientId && registration.data.clientSecret);
+  assert.equal(registration.data.issuer, issuer);
   console.log("PASS client registration");
 
   const account = await post("/o/authenticate/register", { firstName: "Demo", email, password });
@@ -41,10 +54,19 @@ try {
     scope: "openid email profile", state, nonce,
     code_challenge: challenge, code_challenge_method: "S256",
   };
+  const unregisteredCallback = new URL(callback);
+  unregisteredCallback.port = unregisteredCallback.port === "3000" ? "3001" : "3000";
+  const wrongRedirect = await fetch(`${base}/o/3rd-party-client/authorize?${new URLSearchParams({ ...request, redirect_uri: unregisteredCallback.toString() })}`, { redirect: "manual" });
+  assert.equal(wrongRedirect.status, 400);
+  assert.equal(wrongRedirect.headers.get("location"), null);
+  const wrongClient = await fetch(`${base}/o/3rd-party-client/authorize?${new URLSearchParams({ ...request, client_id: crypto.randomUUID() })}`, { redirect: "manual" });
+  assert.equal(wrongClient.status, 400);
+  console.log("PASS unregistered localhost ports and unknown credentials are rejected");
   const authorization = await fetch(`${base}/o/3rd-party-client/authorize?${new URLSearchParams(request)}`, { redirect: "manual" });
   assert.equal(authorization.status, 302);
   const consentUrl = new URL(authorization.headers.get("location")!);
   assert.equal(consentUrl.pathname, "/consent");
+  assert.equal(consentUrl.origin, new URL(process.env.CONSENT_UI_URL ?? process.env.CLIENT!).origin);
   assert.equal(consentUrl.searchParams.get("state"), state);
   console.log("PASS authorization redirect and state");
 
@@ -52,6 +74,7 @@ try {
   assert.equal(consent.response.status, 200);
   const result = new URL(consent.data.redirect_url);
   assert.equal(result.searchParams.get("state"), state);
+  assert.equal(result.searchParams.get("iss"), issuer);
   assert.equal(`${result.origin}${result.pathname}`, callback);
   assert(result.searchParams.get("code"));
   console.log("PASS consent and callback");
@@ -61,6 +84,13 @@ try {
     client_secret: registration.data.clientSecret, code: result.searchParams.get("code"),
     redirect_uri: callback, code_verifier: verifier,
   };
+  const invalidVerifier = await post("/o/token", { ...tokenRequest, code_verifier: crypto.randomBytes(48).toString("base64url") });
+  assert.equal(invalidVerifier.response.status, 400);
+  const invalidSecret = await post("/o/token", { ...tokenRequest, client_secret: crypto.randomBytes(32).toString("hex") });
+  assert.equal(invalidSecret.response.status, 401);
+  const invalidRedirect = await post("/o/token", { ...tokenRequest, redirect_uri: unregisteredCallback.toString() });
+  assert.equal(invalidRedirect.response.status, 400);
+  console.log("PASS token exchange is bound to the secret, exact callback, and PKCE verifier");
   const tokens = await post<{ access_token: string; id_token: string; refresh_token: string }>("/o/token", tokenRequest);
   assert.equal(tokens.response.status, 200, "PKCE token exchange");
   assert(tokens.data.access_token && tokens.data.id_token && tokens.data.refresh_token);

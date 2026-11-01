@@ -1,9 +1,8 @@
 import crypto from "node:crypto";
+import { parseWebUrl } from "./url-policy";
 
 export const SUPPORTED_SCOPES = ["openid", "email", "profile"] as const;
 export const DEFAULT_SCOPE = "openid";
-
-const LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 export function parseScopes(scope?: unknown) {
   const scopeValue = typeof scope === "string" ? scope : DEFAULT_SCOPE;
@@ -45,19 +44,7 @@ export function validateScopes(
 }
 
 export function validateRedirectUri(uri: unknown) {
-  if (typeof uri !== "string" || uri.length > 2048) return false;
-
-  try {
-    const parsed = new URL(uri);
-    if (parsed.hash) return false;
-    if (!["https:", "http:"].includes(parsed.protocol)) return false;
-    if (parsed.protocol === "http:" && !LOCALHOST_HOSTS.has(parsed.hostname)) {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
+  return parseWebUrl(uri) !== null;
 }
 
 export function validateClientName(name: unknown) {
@@ -67,7 +54,7 @@ export function validateClientName(name: unknown) {
 export function validateCodeChallenge(challenge: unknown, method: unknown) {
   if (method !== "S256") return false;
   if (typeof challenge !== "string") return false;
-  return /^[A-Za-z0-9._~-]{43,128}$/.test(challenge);
+  return /^[A-Za-z0-9_-]{43}$/.test(challenge);
 }
 
 export function verifyPkce(codeVerifier: unknown, codeChallenge: string) {
