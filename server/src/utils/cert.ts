@@ -1,6 +1,7 @@
 import { env } from "../env";
+import { loadSigningKeys } from "./signing-keys";
 
-const normalizePem = (value: string) => value.replace(/\\n/g, "\n");
+const keys = loadSigningKeys(env.PRIVATE_KEY, env.PUBLIC_KEY);
 
-export const PRIVATE_KEY = normalizePem(env.PRIVATE_KEY);
-export const PUBLIC_KEY = normalizePem(env.PUBLIC_KEY);
+export const PRIVATE_KEY = keys.privateKey;
+export const PUBLIC_KEY = keys.publicKey;

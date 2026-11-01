@@ -191,6 +191,8 @@ This creates `cert/private-key.pem` and `cert/public-key.pub` used for signing J
 
 These files are intentionally ignored by Git. Do not commit private signing keys.
 
+Set `PRIVATE_KEY` and `PUBLIC_KEY` in `server/.env` using the generated PEM contents (with quoted multiline values or escaped `\n` newlines), or their base64-encoded DER bodies. Both formats are accepted. The server validates that the RSA keys match and are at least 2048 bits before serving requests.
+
 ### 3. Configure Environment Variables
 
 Copy the example env file and fill in your values:
