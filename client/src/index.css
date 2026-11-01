@@ -1,43 +1,31 @@
+@import "@fontsource-variable/inter";
 @import "tailwindcss";
 @import "tw-animate-css";
-
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #e7f7cf;
-  --secondary-background: oklch(100% 0 0);
-  --foreground: oklch(0% 0 0);
-  --main-foreground: oklch(0% 0 0);
-  --main: oklch(83.29% 0.2331 132.51);
-  --border: oklch(0% 0 0);
-  --ring: oklch(0% 0 0);
-  --overlay: oklch(0% 0 0 / 0.8);
-  --shadow: 2px 2px 0px 0px var(--border);
-  --chart-1: #8AE500;
-  --chart-2: #0099FF;
-  --chart-3: #FF4D50;
-  --chart-4: #FACC00;
-  --chart-5: #7A83FF;
-  --chart-active-dot: #000;
+  font-family: 'Inter Variable', Inter, sans-serif;
+  color: #171717;
+  background: #ffffff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --background: #ffffff;
+  --secondary-background: #ffffff;
+  --foreground: #171717;
+  --main-foreground: #ffffff;
+  --main: #000000;
+  --border: #eaeaea;
+  --ring: #171717;
+  --overlay: #262626cc;
+  --shadow: 0 2px 4px #00000006, 0 8px 24px #0000000a;
+  --chart-1: #cfcfcf;
+  --chart-2: #d2d2d2;
+  --chart-3: #dddddd;
+  --chart-4: #dddddd;
+  --chart-5: #d1d1d1;
+  --chart-active-dot: #202020;
 }
-
-.dark {
-  --background: oklch(23.1% 0.0346 126.75);
-  --secondary-background: oklch(23.93% 0 0);
-  --foreground: oklch(92.49% 0 0);
-  --main-foreground: oklch(0% 0 0);
-  --main: oklch(76.26% 0.21309 132.4002);
-  --border: oklch(0% 0 0);
-  --ring: oklch(100% 0 0);
-  --shadow: 2px 2px 0px 0px var(--border);
-  --chart-1: #7ACC00;
-  --chart-2: #008AE5;
-  --chart-3: #FF6669;
-  --chart-4: #E0B700;
-  --chart-5: #7A83FF;
-  --chart-active-dot: #fff;
-}
-
 @theme inline {
   --color-main: var(--main);
   --color-background: var(--background);
@@ -52,28 +40,21 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-
-  --spacing-boxShadowX: 2px;
-  --spacing-boxShadowY: 2px;
-  --spacing-reverseBoxShadowX: -2px;
-  --spacing-reverseBoxShadowY: -2px;
-  --radius-base: 0px;
+  --spacing-boxShadowX: 0px;
+  --spacing-boxShadowY: 0px;
+  --spacing-reverseBoxShadowX: 0px;
+  --spacing-reverseBoxShadowY: 0px;
+  --radius-base: 12px;
   --shadow-shadow: var(--shadow);
-  --font-weight-base: 500;
-  --font-weight-heading: 900;
+  --font-weight-base: 450;
+  --font-weight-heading: 600;
 }
-
 @layer base {
-  body {
-    @apply text-foreground font-base bg-background;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-heading;
-  }
+  body { margin: 0; min-width: 320px; @apply text-foreground font-base bg-background; }
+  h1, h2, h3, h4, h5, h6 { @apply font-heading; }
+  button, a, input { -webkit-tap-highlight-color: transparent; }
+  button { cursor: pointer; }
+  button:disabled { cursor: wait; }
+  :focus-visible { outline: 2px solid #171717; outline-offset: 5px; }
+  ::selection { background: #d4d4d4; color: #353535; }
 }

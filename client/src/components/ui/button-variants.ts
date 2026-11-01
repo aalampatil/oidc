@@ -6,12 +6,12 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "text-main-foreground bg-main border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
-        noShadow: "text-main-foreground bg-main border-2 border-border",
+          "text-main-foreground bg-main border border-main shadow-shadow hover:brightness-110 active:brightness-95",
+        noShadow: "text-main-foreground bg-main border border-main hover:brightness-110",
         neutral:
-          "bg-secondary-background text-foreground border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
+          "bg-secondary-background text-foreground border border-white/60 shadow-shadow hover:brightness-105",
         reverse:
-          "text-main-foreground bg-main border-2 border-border hover:translate-x-reverseBoxShadowX hover:translate-y-reverseBoxShadowY hover:shadow-shadow",
+          "text-main-foreground bg-main border border-main shadow-shadow hover:brightness-110",
       },
       size: {
         default: "h-10 px-4 py-2",

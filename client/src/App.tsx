@@ -1,34 +1,24 @@
 import './App.css'
 import Header from './components/custom/Header/Header'
 import Footer from './components/custom/Footer/Footer'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 
 function App() {
-
-
+  const { pathname, hash } = useLocation()
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+    })
+    else window.scrollTo(0, 0)
+  }, [pathname, hash])
   return (
-    <>
-      <div
-        className="bg-background min-h-screen box-border"
-        style={{
-          backgroundImage: `
-      linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px),
-      linear-gradient(#e7f7cf)
-    `,
-          backgroundSize: "75px 75px, 75px 75px, 100% 100%",
-        }}
-      >
-        <Header />
-
-        <div className="min-h-screen p-0 m-0">
-          <Outlet />
-        </div>
-
-        <Footer />
-      </div>
-    </>
+    <div className="app-shell">
+      <a className="skip-link" href="#main-content">Skip to content</a>
+      <Header />
+      <main id="main-content" className={pathname === '/' ? 'landing-content' : 'app-content'}><Outlet /></main>
+      <Footer />
+    </div>
   )
 }
-
 export default App
