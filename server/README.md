@@ -203,7 +203,7 @@ cp .env.example .env
 
 ```env
 PORT=3000
-DATABASE_URL=postgresql://ADMIN:ADMIN@localhost:5433/oidc_auth
+DATABASE_URL=postgresql://ADMIN:ADMIN@localhost:5434/oidc_auth
 ISSUER_URL=http://localhost:3000
 CLIENT=http://localhost:5173
 SERVER=http://localhost:3000
@@ -224,13 +224,21 @@ cd server
 docker compose up -d
 ```
 
-This starts PostgreSQL on port `5433` (mapped from the container's `5432`).
+This starts PostgreSQL on port `5434` (mapped from the container's `5432`). Use the same port in `DATABASE_URL`.
+
+If you reuse a Docker volume, changing `POSTGRES_DB` does not create a new database in that volume. If `oidc_auth` is missing, create it once without deleting the volume or its existing databases:
+
+```bash
+docker compose exec postgres psql -U ADMIN -d postgres -c 'CREATE DATABASE oidc_auth;'
+```
 
 ### 5. Run Database Migrations
 
 ```bash
 bun run db:migrate
 ```
+
+Restart the server after changing `.env`. Startup checks that the database and the required tables and columns exist before accepting requests.
 
 ### 6. Start the Server
 

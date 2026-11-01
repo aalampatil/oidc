@@ -6,8 +6,18 @@ import cors from "cors";
 import { oidcRouter } from "./modules/oidcAuth/oidcAuth.routes";
 import { thirdPartyRouter } from "./modules/oauth-3rdparty/3rdparty.routes";
 import { oidcDiscoveryRouter } from "./modules/oidcDiscovery/oidcDiscovery.routes";
+import { db } from "./db/index";
+import { authCodesTable, oauthClientsTable, refreshTokensTable, usersTable } from "./db/schema";
+import { apiErrorHandler, getDatabaseErrorCode } from "./utils/api-error";
 
 async function main() {
+  // Check connectivity and migrated columns before accepting authentication requests.
+  await Promise.all([
+    db.select().from(usersTable).limit(0),
+    db.select().from(oauthClientsTable).limit(0),
+    db.select().from(authCodesTable).limit(0),
+    db.select().from(refreshTokensTable).limit(0),
+  ]);
   const app = express();
   const PORT = env.PORT || 3000;
 
@@ -34,10 +44,17 @@ async function main() {
   app.use("/.well-known", oidcDiscoveryRouter);
   app.use("/o", oidcRouter);
   app.use("/o/3rd-party-client", thirdPartyRouter);
+  app.use(apiErrorHandler);
 
   app.listen(PORT, () => {
     console.log(`server is listening on ${env.SERVER}`);
   });
 }
 
-main();
+main().catch((error: unknown) => {
+  console.error("Authentication server could not start.", {
+    code: getDatabaseErrorCode(error) ?? "startup_error",
+    message: "Check DATABASE_URL, start PostgreSQL, and run bun run db:migrate from server/.",
+  });
+  process.exit(1);
+});
