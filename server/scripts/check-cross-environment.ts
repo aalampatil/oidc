@@ -29,7 +29,7 @@ const fixture = {
   SMTP_PASSWORD: "integration-test",
   EMAIL_FROM: "Identity <test@example.com>",
 };
-const server = Bun.spawn([process.execPath, "run", "src/index.ts"], { env: fixture, stdout: "pipe", stderr: "pipe" });
+const server = Bun.spawn([process.execPath, "run", "start"], { env: fixture, stdout: "pipe", stderr: "pipe" });
 try {
   let ready = false;
   for (let attempt = 0; attempt < 80; attempt++) {

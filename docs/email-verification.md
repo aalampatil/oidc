@@ -61,11 +61,24 @@ duplicate accounts from concurrent registrations.
 
 ## Migration and checks
 
-Run `bun run db:migrate` from `server/` before starting the updated server. The
+`bun start` from `server/` applies pending database migrations before launching
+the authentication server. If migration fails, startup stops. `bun run dev`
+starts the development watcher directly; run `bun run db:migrate` first. The
 `0004_email_verification` migration adds the challenge table and case-insensitive
 email uniqueness. Existing duplicate emails must be resolved before that unique
 index can be created. Existing accounts remain unverified until they complete the
-code flow. Apply the migration to each deployment database before releasing.
+code flow.
+
+For Render's native Bun runtime, use root directory `server`, build command
+`bun install && bun run build`, and start command `bun start`. Set `DATABASE_URL`,
+`RESEND_API_KEY`, `EMAIL_FROM`, and the existing OIDC settings in Render's
+environment. The start script uses those environment variables; it does not
+require uploading `.env.production`. A `42P01` startup error after the OTP change
+means a required table is missing, commonly `email_verifications` before migration
+`0004` has run. Redeploy the version with the migration-aware start script.
+
+Render also supports a separate pre-deploy migration command on eligible paid
+services. See [Render's deploy lifecycle](https://render.com/docs/deploys#pre-deploy-command).
 
 `bun run check` runs unit tests and both type checks. PostgreSQL OTP integration
 tests require an explicit `TEST_DATABASE_URL` pointing at a migrated test database:

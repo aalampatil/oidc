@@ -20,7 +20,7 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "build": "tsc",
-    "start": "bun run src/index.ts",
+    "start": "bun run db:migrate && bun run src/index.ts",
     "test": "bun test src",
     "typecheck": "tsc --noEmit",
     "test:integration": "bun run scripts/check-cross-environment.ts",

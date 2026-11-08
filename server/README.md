@@ -247,7 +247,10 @@ docker compose exec postgres psql -U ADMIN -d postgres -c 'CREATE DATABASE oidc_
 bun run db:migrate
 ```
 
-Restart the server after changing `.env`. Startup checks that the database and the required tables and columns exist before accepting requests.
+Restart the server after changing `.env`. `bun start` applies pending migrations
+before launching the server; `bun run dev` requires running migrations manually.
+Startup checks that the database and the required tables and columns exist before
+accepting requests.
 
 ### 6. Start the Server
 
