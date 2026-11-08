@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth.store'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 const Login = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const login = useAuthStore((state) => state.login)
   const getUserInfo = useAuthStore((state) => state.getUserInfo)
   const clearError = useAuthStore((state) => state.clearError)
@@ -24,7 +25,11 @@ const Login = () => {
       password: String(formData.get('password') ?? ''),
     })
 
-    if (!ok) return
+    if (!ok) {
+      const pending = useAuthStore.getState().pendingVerification
+      if (pending) navigate('/verify-email', { state: pending })
+      return
+    }
 
     await getUserInfo()
     navigate('/')
@@ -64,6 +69,7 @@ const Login = () => {
           <div className="absolute -left-3 -top-3 h-full w-full border-2 border-border bg-chart-4" />
           <form onSubmit={handleSubmit} className="relative space-y-5 border-2 border-border bg-secondary-background p-6 shadow-shadow md:p-8">
             <h2 className="text-2xl font-heading">Sign In</h2>
+            {location.state?.emailVerified ? <p role="status">Email verified. You can now sign in.</p> : null}
 
             <div className="space-y-2">
               <label htmlFor="email" className="text-xs font-heading uppercase">Email</label>

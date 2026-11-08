@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useThirdPartyStore } from '@/store/thirdParty.store'
 import { useAuthStore } from '@/store/auth.store'
 
 const ConsentScreen = () => {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { authorize, error: thirdPartyError, loading: thirdPartyLoading } = useThirdPartyStore()
   const { register, error: authError, loading: authLoading } = useAuthStore()
 
@@ -13,7 +15,6 @@ const ConsentScreen = () => {
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [registerSuccess, setRegisterSuccess] = useState(false)
 
   const appName = searchParams.get('app') ?? 'Trusted Application'
   const requestedScopes = (searchParams.get('scope') ?? 'openid email profile').split(' ')
@@ -42,16 +43,18 @@ const ConsentScreen = () => {
     if (response?.redirect_url) {
       window.location.href = response.redirect_url
     }
+    const verificationEmail = useThirdPartyStore.getState().verificationEmail
+    if (verificationEmail) navigate('/verify-email', { state: {
+      email: verificationEmail, returnTo: `/consent${location.search}`,
+    } })
   }
 
   const handleRegister = async () => {
     const ok = await register({ firstName, email, password })
     if (ok) {
-      setRegisterSuccess(true)
-      setTimeout(() => {
-        setRegisterSuccess(false)
-        setMode('login')
-      }, 1500)
+      navigate('/verify-email', { state: {
+        ...useAuthStore.getState().pendingVerification, returnTo: `/consent${location.search}`,
+      } })
     }
   }
 
@@ -97,9 +100,9 @@ const ConsentScreen = () => {
               </p>
             )}
 
-            {registerSuccess && (
+            {location.state?.emailVerified && (
               <p className="border-2 border-green-400 bg-green-50 px-3 py-2 text-xs text-green-600 uppercase">
-                Account created! Redirecting to login...
+                Email verified. Sign in to continue.
               </p>
             )}
 

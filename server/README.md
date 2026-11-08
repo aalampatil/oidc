@@ -4,6 +4,9 @@ A from-scratch implementation of an **OpenID Connect (OIDC) Identity Provider** 
 
 See the [cross-environment integration guide](../docs/oidc-integration.md) for localhost applications authenticating against a deployed provider, configuration examples, CORS policy, security requirements, and troubleshooting. The [decision log](../update/decsion.md) records the investigation and refactor.
 
+See [email verification](../docs/email-verification.md) for Resend/Mailtrap setup,
+OTP endpoints, the reusable email service and client hook, migrations, and tests.
+
 ---
 
 ## What is this?

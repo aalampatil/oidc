@@ -5,7 +5,10 @@ import {
   text,
   boolean,
   timestamp,
+  integer,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 //user table
 export const usersTable = pgTable("users", {
@@ -24,6 +27,17 @@ export const usersTable = pgTable("users", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+}, (table) => [uniqueIndex("users_email_lower_unique").on(sql`lower(${table.email})`)]);
+
+// One active challenge per account. The code itself is never persisted.
+export const emailVerificationsTable = pgTable("email_verifications", {
+  userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+  codeHash: text("code_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  sentAt: timestamp("sent_at").notNull(),
+  windowStartedAt: timestamp("window_started_at").notNull(),
+  sendCount: integer("send_count").notNull().default(1),
 });
 
 export const oauthClientsTable = pgTable("oauth_clients", {

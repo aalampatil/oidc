@@ -44,6 +44,7 @@ type AuthState = {
   loading: boolean;
   authStatus: boolean;
   error: string | null;
+  pendingVerification: { email: string; retryAfter?: number; deliveryFailed?: boolean } | null;
   register: (payload: RegisterPayload) => Promise<boolean>;
   login: (payload: LoginPayload) => Promise<boolean>;
   getUserInfo: () => Promise<UserInfo | null>;
@@ -63,14 +64,15 @@ export const useAuthStore = create<AuthState>()(
       loading: false,
       authStatus: false,
       error: null,
+      pendingVerification: null,
 
       register: async (payload) => {
-        // console.log(payload);
-        // console.log();
-        set({ loading: true, error: null });
+        set({ loading: true, error: null, pendingVerification: null });
         try {
-          await authApi.post("/authenticate/register", payload);
-          set({ loading: false });
+          const { data } = await authApi.post("/authenticate/register", payload);
+          set({ loading: false, pendingVerification: {
+            email: data.email, retryAfter: data.retryAfter, deliveryFailed: data.deliveryFailed,
+          } });
           return true;
         } catch (error) {
           const message = axios.isAxiosError(error)
@@ -83,7 +85,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: async (payload) => {
-        set({ loading: true, error: null });
+        set({ loading: true, error: null, pendingVerification: null });
         try {
           const { data } = await authApi.post<TokenResponse>(
             "/authenticate/login",
@@ -107,6 +109,8 @@ export const useAuthStore = create<AuthState>()(
           set({
             loading: false,
             authStatus: false,
+            pendingVerification: axios.isAxiosError(error) && error.response?.data?.error === "email_not_verified"
+              ? { email: error.response.data.email } : null,
             error: message,
             accessToken: null,
             idToken: null,
@@ -148,6 +152,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () =>
         set({
+          pendingVerification: null,
+          authStatus: false,
           accessToken: null,
           idToken: null,
           refreshToken: null,

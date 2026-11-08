@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { thirdPartyApi, OIDC_ISSUER_URL } from "@/configs/axiosApi";
 import { providerStorageKey } from "@/lib/providerConfig";
+import axios from "axios";
 
 type RegisterThirdPartyPayload = {
   name: string;
@@ -35,6 +36,7 @@ type AuthorizePayload = {
 };
 
 type ThirdPartyState = {
+  verificationEmail: string | null;
   loading: boolean;
   error: string | null;
   registration: RegisterThirdPartyResponse | null;
@@ -59,6 +61,7 @@ type ThirdPartyState = {
 export const useThirdPartyStore = create<ThirdPartyState>()(
   persist(
     (set, get) => ({
+      verificationEmail: null,
       loading: false,
       error: null,
       registration: null,
@@ -115,14 +118,16 @@ export const useThirdPartyStore = create<ThirdPartyState>()(
       },
 
       authorize: async (payload) => {
-        set({ loading: true, error: null });
+        set({ loading: true, error: null, verificationEmail: null });
         try {
           const { data } = await thirdPartyApi.post("/authorize", payload);
           set({ loading: false });
           return data;
         } catch (error) {
           const message = getApiErrorMessage(error, "Authorization failed.");
-          set({ loading: false, error: message });
+          set({ loading: false, error: message, verificationEmail:
+            axios.isAxiosError(error) && error.response?.data?.error === "email_not_verified"
+              ? error.response.data.email : null });
           return false;
         }
       },

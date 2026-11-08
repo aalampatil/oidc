@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import pg from "pg";
 import JWT from "jsonwebtoken";
 import { loadSigningKeys } from "../src/utils/signing-keys";
+import { hashPassword } from "../src/utils/security";
 
 // Run against a local server: bun run scripts/check-demo.ts
 const base = process.env.SERVER ?? "http://localhost:3000";
@@ -45,6 +46,30 @@ try {
 
   const account = await post("/o/authenticate/register", { firstName: "Demo", email, password });
   assert.equal(account.response.status, 201, "Test account registration");
+  const unverifiedLogin = await post<{ error: string }>("/o/authenticate/login", { email, password });
+  assert.equal(unverifiedLogin.response.status, 403);
+  assert.equal(unverifiedLogin.data.error, "email_not_verified");
+
+  // Seed a known challenge only for this generated test account. The HTTP flow
+  // then verifies the persisted scrypt hash without sending a real email.
+  const otp = "012345";
+  const { hash } = await hashPassword(otp);
+  const fixtureDb = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await fixtureDb.connect();
+  try {
+    const seeded = await fixtureDb.query(
+      `INSERT INTO email_verifications (user_id, code_hash, expires_at, sent_at, window_started_at)
+       SELECT id, $2, NOW() + INTERVAL '10 minutes', NOW(), NOW() FROM users WHERE email = $1
+       ON CONFLICT (user_id) DO UPDATE SET code_hash = EXCLUDED.code_hash,
+         expires_at = EXCLUDED.expires_at, attempts = 0`, [email, hash],
+    );
+    assert.equal(seeded.rowCount, 1);
+  } finally { await fixtureDb.end(); }
+  assert.equal((await post("/o/authenticate/email-verification/verify", { email, code: "999999" })).response.status, 400);
+  assert.equal((await post("/o/authenticate/email-verification/verify", { email, code: otp })).response.status, 200);
+  assert.equal((await post("/o/authenticate/email-verification/verify", { email, code: otp })).response.status, 400);
+  assert.equal((await post("/o/authenticate/login", { email, password })).response.status, 200);
+  console.log("PASS unverified login is blocked; OTP verification enables login and rejects replay");
   const verifier = crypto.randomBytes(48).toString("base64url");
   const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
   const state = crypto.randomBytes(24).toString("base64url");
@@ -117,6 +142,7 @@ try {
       await database.query("DELETE FROM auth_codes WHERE client_id = $1", [clientId]);
       await database.query("DELETE FROM oauth_clients WHERE id = $1", [clientId]);
     }
+    await database.query("DELETE FROM refresh_tokens WHERE user_id IN (SELECT id FROM users WHERE email = $1)", [email]);
     await database.query("DELETE FROM users WHERE email = $1", [email]);
     await database.query("COMMIT");
     console.log("Removed verification data.");

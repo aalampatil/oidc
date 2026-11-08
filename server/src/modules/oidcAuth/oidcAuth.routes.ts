@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { OidcController } from "./oidcAuth.controller";
+import { emailVerificationRouter, verificationSendLimiter } from "../emailVerification/emailVerification.routes";
 
 export const oidcRouter = Router();
 const controller = new OidcController();
 
-oidcRouter.post("/authenticate/register", controller.register.bind(controller));
+oidcRouter.use("/authenticate/email-verification", emailVerificationRouter);
+oidcRouter.post("/authenticate/register", verificationSendLimiter, controller.register.bind(controller));
 oidcRouter.post("/authenticate/login", controller.login.bind(controller));
 oidcRouter.get("/userinfo", controller.userinfo.bind(controller));
 oidcRouter.post("/token", controller.token.bind(controller));

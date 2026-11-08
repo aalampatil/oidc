@@ -1,4 +1,6 @@
 import type { ErrorRequestHandler } from "express";
+import { EmailDeliveryError } from "../services/email/email.service";
+import { VerificationError } from "../modules/emailVerification/emailVerification.errors";
 
 export function getDatabaseErrorCode(error: unknown): string | undefined {
   const seen = new Set<unknown>();
@@ -12,6 +14,14 @@ export function getDatabaseErrorCode(error: unknown): string | undefined {
 
 export const apiErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   if (res.headersSent) return next(error);
+
+  if (error instanceof VerificationError) {
+    if (error.retryAfter) res.setHeader("Retry-After", error.retryAfter);
+    return res.status(error.status).json({ error: error.code, message: error.message, retryAfter: error.retryAfter });
+  }
+  if (error instanceof EmailDeliveryError) {
+    return res.status(503).json({ error: "email_delivery_failed", message: error.message });
+  }
 
   const code = getDatabaseErrorCode(error);
   const databaseUnavailable = ["3D000", "42P01", "42703", "28P01", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "57P01"].includes(code ?? "");

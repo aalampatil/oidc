@@ -17,7 +17,6 @@ const Register = () => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    console.log(formData)
 
     const ok = await register({
       firstName: String(formData.get('firstName') ?? '').trim(),
@@ -26,12 +25,11 @@ const Register = () => {
       password: String(formData.get('password') ?? ''),
     })
 
-    console.log(ok)
 
 
     if (!ok) return
 
-    navigate('/login')
+    navigate('/verify-email', { state: useAuthStore.getState().pendingVerification })
   }
 
   return (
@@ -75,6 +73,7 @@ const Register = () => {
                 <input
                   id="firstName"
                   name="firstName"
+                  maxLength={25}
                   type="text"
                   required
                   placeholder="Your Name"
@@ -86,6 +85,7 @@ const Register = () => {
                 <input
                   id="lastName"
                   name="lastName"
+                  maxLength={25}
                   type="text"
                   placeholder="last name"
                   className="w-full border-2 border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring"
@@ -110,6 +110,9 @@ const Register = () => {
               <input
                 id="password"
                 name="password"
+                minLength={8}
+                maxLength={256}
+                autoComplete="new-password"
                 type="password"
                 required
                 placeholder="Create password"

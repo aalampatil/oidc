@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { db } from "../../db/index";
 import { authCodesTable, oauthClientsTable, usersTable } from "../../db/schema";
@@ -163,7 +163,7 @@ export class ThirdPartyController {
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, email))
+      .where(sql`lower(${usersTable.email}) = ${email.trim().toLowerCase()}`)
       .limit(1);
 
     if (!user || !user.salt) {
@@ -172,6 +172,11 @@ export class ThirdPartyController {
 
     if (!user.password || !(await verifyPassword(password, user.password, user.salt))) {
       return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    if (!user.emailVerified) {
+      return res.status(403).json({ error: "email_not_verified", email: user.email,
+        message: "Verify your email address before authorizing this application." });
     }
 
     const code = crypto.randomBytes(24).toString("hex");

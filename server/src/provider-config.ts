@@ -9,6 +9,7 @@ const providerUrl = z.string().refine((value) => {
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
   DATABASE_URL: z.string().min(1),
   ISSUER_URL: providerUrl,
   CONSENT_UI_URL: providerUrl.optional(),

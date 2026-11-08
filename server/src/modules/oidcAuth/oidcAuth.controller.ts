@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { z } from "zod";
+import { emailVerificationService } from "../emailVerification/emailVerification.service";
 import JWT from "jsonwebtoken";
 import type { Request, Response } from "express";
 import { db } from "../../db/index";
@@ -29,18 +31,23 @@ const ISSUER = env.ISSUER_URL;
 
 export class OidcController {
   register = async (req: Request, res: Response) => {
-    const { firstName, lastName, email, password } = req.body;
-
-    if (!email || !password || !firstName) {
+    const input = z.object({
+      firstName: z.string().trim().min(1).max(25),
+      lastName: z.string().trim().max(25).optional(),
+      email: z.string().trim().max(322).pipe(z.email()).transform((value) => value.toLowerCase()),
+      password: z.string().min(8).max(256),
+    }).safeParse(req.body);
+    if (!input.success) {
       return res
         .status(400)
-        .json({ message: "First name, email, and password are required." });
+        .json({ message: "Provide a first name (up to 25 characters), valid email, and password of 8–256 characters." });
     }
+    const { firstName, lastName, email, password } = input.data;
 
     const [existing] = await db
       .select({ id: usersTable.id })
       .from(usersTable)
-      .where(eq(usersTable.email, email))
+      .where(sql`lower(${usersTable.email}) = ${email}`)
       .limit(1);
 
     if (existing) {
@@ -51,21 +58,30 @@ export class OidcController {
 
     const { hash, salt } = await hashPassword(password);
 
-    await db.insert(usersTable).values({
+    const created = await db.insert(usersTable).values({
       firstName,
       lastName: lastName ?? null,
       email,
       password: hash,
       salt,
-    });
+    }).onConflictDoNothing().returning({ id: usersTable.id });
+    if (!created.length) return res.status(409).json({ message: "An account with this email already exists." });
 
-    return res.status(201).json({ ok: true });
+    // The account remains recoverable through /email-verification/send if
+    // delivery fails after account creation.
+    try {
+      const result = await emailVerificationService.send(email);
+      return res.status(201).json({ ...result, verificationRequired: true, email });
+    } catch {
+      return res.status(201).json({ ok: true, verificationRequired: true, email,
+        deliveryFailed: true, message: "Account created, but the verification email could not be sent. Request a new code." });
+    }
   };
 
   login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
       return res
         .status(400)
         .json({ message: "Email and password are required." });
@@ -74,7 +90,7 @@ export class OidcController {
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, email))
+      .where(sql`lower(${usersTable.email}) = ${email.trim().toLowerCase()}`)
       .limit(1);
 
     if (!user || !user.password || !user.salt) {
@@ -83,6 +99,11 @@ export class OidcController {
 
     if (!(await verifyPassword(password, user.password, user.salt))) {
       return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    if (!user.emailVerified) {
+      return res.status(403).json({ error: "email_not_verified", email: user.email,
+        message: "Verify your email address before signing in." });
     }
 
     const scope = "openid email profile";
@@ -225,7 +246,7 @@ export class OidcController {
       .from(usersTable)
       .where(eq(usersTable.id, authCode.userId));
 
-    if (!user) return res.status(400).json({ error: "invalid_user" });
+    if (!user || !user.emailVerified) return res.status(400).json({ error: "invalid_grant" });
 
     const accessToken = signAccessToken(user.id, client_id, authCode.scopes);
     const idToken = signIdToken(user, client_id, authCode.nonce);
@@ -289,7 +310,7 @@ export class OidcController {
       .from(usersTable)
       .where(eq(usersTable.id, stored.userId));
 
-    if (!user) return res.status(400).json({ error: "invalid_user" });
+    if (!user || !user.emailVerified) return res.status(400).json({ error: "invalid_grant" });
 
     const scope = normalizeScopes(stored.scopes);
     const accessToken = signAccessToken(user.id, client_id, scope);

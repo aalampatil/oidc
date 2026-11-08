@@ -7,7 +7,7 @@ import { oidcRouter } from "./modules/oidcAuth/oidcAuth.routes";
 import { thirdPartyRouter } from "./modules/oauth-3rdparty/3rdparty.routes";
 import { oidcDiscoveryRouter } from "./modules/oidcDiscovery/oidcDiscovery.routes";
 import { db } from "./db/index";
-import { authCodesTable, oauthClientsTable, refreshTokensTable, usersTable } from "./db/schema";
+import { authCodesTable, emailVerificationsTable, oauthClientsTable, refreshTokensTable, usersTable } from "./db/schema";
 import { apiErrorHandler, getDatabaseErrorCode } from "./utils/api-error";
 
 async function main() {
@@ -17,8 +17,10 @@ async function main() {
     db.select().from(oauthClientsTable).limit(0),
     db.select().from(authCodesTable).limit(0),
     db.select().from(refreshTokensTable).limit(0),
+    db.select().from(emailVerificationsTable).limit(0),
   ]);
   const app = express();
+  if (env.TRUST_PROXY_HOPS > 0) app.set("trust proxy", env.TRUST_PROXY_HOPS);
   const PORT = env.PORT;
 
   app.use(createProviderCors(env.allowedOrigins));

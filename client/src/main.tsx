@@ -6,6 +6,7 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom"
 import Hero from './pages/Hero'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import VerifyEmail from './pages/VerifyEmail'
 import TrustForm from './pages/TrustForm'
 import AccountPage from './pages/AccountPage'
 import ConsentScreen from './pages/ConsentScreen'
@@ -18,6 +19,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
+      { path: 'verify-email', element: <VerifyEmail /> },
       {
         path: "",
         index: true,

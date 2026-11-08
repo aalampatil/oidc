@@ -21,6 +21,13 @@ const fixture = {
   CONSENT_UI_URL: "https://identity.example.test",
   CORS_ALLOWED_ORIGINS: "http://localhost:3000",
   DEMO_REDIRECT_URI: "http://localhost:3000/auth/callback",
+  // Exercise delivery failure recovery without contacting an external provider.
+  EMAIL_PROVIDER: "smtp",
+  SMTP_HOST: "127.0.0.1",
+  SMTP_PORT: "1",
+  SMTP_USERNAME: "integration-test",
+  SMTP_PASSWORD: "integration-test",
+  EMAIL_FROM: "Identity <test@example.com>",
 };
 const server = Bun.spawn([process.execPath, "run", "src/index.ts"], { env: fixture, stdout: "pipe", stderr: "pipe" });
 try {
