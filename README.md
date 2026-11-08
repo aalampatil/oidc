@@ -26,3 +26,7 @@ Run the same checks manually with `bun run check`, or use `bun run check:client`
 These checks do not require a database, signing keys, or a running provider. Run `bun run test:integration` from `server/` separately when changing the authentication flow; that check requires a configured local database and keys.
 
 Git must be able to find `bun` on PATH, including when committing from an editor. Hook scripts use LF endings for compatibility with Git for Windows. In CI, set `HUSKY=0` when installing dependencies to disable local hook installation, and run `bun run check` explicitly.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
