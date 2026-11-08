@@ -16,6 +16,20 @@ test("CORS permits only explicit API origins, keeps discovery public, and exclud
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-origin")).toBe("http://localhost:3000");
     expect(preflight.headers.get("access-control-allow-credentials")).toBeNull();
+    for (const method of ["PATCH", "DELETE"]) {
+      const accountPreflight = await fetch(`${base}/o/account`, { method: "OPTIONS", headers: {
+        Origin: "https://identity.example.com", "Access-Control-Request-Method": method,
+        "Access-Control-Request-Headers": "content-type,authorization",
+      } });
+      expect(accountPreflight.status).toBe(204);
+      expect(accountPreflight.headers.get("access-control-allow-origin")).toBe("https://identity.example.com");
+      expect(accountPreflight.headers.get("access-control-allow-methods")?.split(",")).toContain(method);
+      expect(accountPreflight.headers.get("access-control-allow-headers")).toContain("Authorization");
+      const denied = await fetch(`${base}/o/account`, { method: "OPTIONS", headers: {
+        Origin: "https://evil.example", "Access-Control-Request-Method": method,
+      } });
+      expect(denied.headers.get("access-control-allow-origin")).toBeNull();
+    }
     for (const origin of ["http://localhost:3001", "https://evil.example", "null"]) {
       const denied = await fetch(`${base}/o/token`, { headers: { Origin: origin } });
       expect(denied.headers.get("access-control-allow-origin")).toBeNull();

@@ -6,7 +6,7 @@ export function createProviderCors(allowedOrigins: readonly string[]): RequestHa
   const publicMetadata = cors({ origin: "*", methods: ["GET", "OPTIONS"], credentials: false });
   const browserApi = cors({
     origin: (origin, done) => done(null, origin !== undefined && origins.has(origin)),
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: false,
     maxAge: 600,
