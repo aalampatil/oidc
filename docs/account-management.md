@@ -1,5 +1,18 @@
 # Account management
 
+The header's **My account** link opens `/account`. The page displays the verified
+email, editable first/last names, account ID, and join date, with a sign-out action
+and a separate permanent-deletion form. `/profile` redirects to `/account`.
+Registered OAuth clients remain available at `/account/apps`; the list represents
+clients registered in this browser rather than server-side account ownership.
+
+`client/src/services/account.ts` provides typed API methods, and
+`client/src/hooks/useAccount.ts` handles loading, saving, deletion, request
+cancellation, duplicate submissions, and expired sessions. Profile saves update
+the cached user. Deletion requires typing the account email and current password;
+canceling clears the confirmation fields. After the server confirms deletion,
+the page clears cached credentials and redirects to sign-in with a success notice.
+
 Account management uses the first-party access token returned by
 `POST /o/authenticate/login`. Every account route verifies the RS256 signature,
 issuer, `aud=self`, `client_id=self`, `token_use=access`, and UUID subject. OIDC

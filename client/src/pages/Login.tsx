@@ -69,6 +69,7 @@ const Login = () => {
           <div className="absolute -left-3 -top-3 h-full w-full border-2 border-border bg-chart-4" />
           <form onSubmit={handleSubmit} className="relative space-y-5 border-2 border-border bg-secondary-background p-6 shadow-shadow md:p-8">
             <h2 className="text-2xl font-heading">Sign In</h2>
+            {location.state?.accountDeleted ? <p role="status">Your account has been permanently deleted.</p> : null}
             {location.state?.emailVerified ? <p role="status">Email verified. You can now sign in.</p> : null}
 
             <div className="space-y-2">

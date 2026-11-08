@@ -24,7 +24,7 @@ type TokenResponse = {
   refresh_token: string;
 };
 
-type UserInfo = {
+export type UserInfo = {
   sub: string;
   email: string;
   email_verified: boolean;

@@ -129,7 +129,7 @@ const TrustForm = () => {
 
             <p className="text-center text-xs uppercase">
               Want all created clients?{' '}
-              <Link to="/account" className="font-heading underline underline-offset-2">
+              <Link to="/account/apps" className="font-heading underline underline-offset-2">
                 Open Account Page
               </Link>
             </p>
