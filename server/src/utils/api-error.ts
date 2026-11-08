@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { EmailDeliveryError } from "../services/email/email.service";
 import { VerificationError } from "../modules/emailVerification/emailVerification.errors";
+import { AccountError } from "../modules/account/account.errors";
 
 export function getDatabaseErrorCode(error: unknown): string | undefined {
   const seen = new Set<unknown>();
@@ -14,6 +15,9 @@ export function getDatabaseErrorCode(error: unknown): string | undefined {
 
 export const apiErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   if (res.headersSent) return next(error);
+  if (error instanceof AccountError) {
+    return res.status(error.status).json({ message: error.message });
+  }
 
   if (error instanceof VerificationError) {
     if (error.retryAfter) res.setHeader("Retry-After", error.retryAfter);

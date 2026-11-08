@@ -68,7 +68,8 @@ try {
   assert.equal((await post("/o/authenticate/email-verification/verify", { email, code: "999999" })).response.status, 400);
   assert.equal((await post("/o/authenticate/email-verification/verify", { email, code: otp })).response.status, 200);
   assert.equal((await post("/o/authenticate/email-verification/verify", { email, code: otp })).response.status, 400);
-  assert.equal((await post("/o/authenticate/login", { email, password })).response.status, 200);
+  const signedIn = await post<{ access_token: string; id_token: string }>("/o/authenticate/login", { email, password });
+  assert.equal(signedIn.response.status, 200);
   console.log("PASS unverified login is blocked; OTP verification enables login and rejects replay");
   const verifier = crypto.randomBytes(48).toString("base64url");
   const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
@@ -132,6 +133,42 @@ try {
   console.log("PASS authenticated UserInfo");
   assert.equal((await post("/o/token", tokenRequest)).response.status, 400);
   console.log("PASS authorization code cannot be exchanged twice");
+
+  const accountHeaders = { Authorization: `Bearer ${signedIn.data.access_token}`, "Content-Type": "application/json" };
+  assert.equal((await fetch(`${base}/o/account`)).status, 401);
+  for (const token of [tokens.data.access_token, signedIn.data.id_token, "invalid-token"]) {
+    assert.equal((await fetch(`${base}/o/account`, { headers: { Authorization: `Bearer ${token}` } })).status, 401);
+  }
+  const profileResponse = await fetch(`${base}/o/account`, { headers: accountHeaders });
+  assert.equal(profileResponse.status, 200);
+  const accountDetails = await profileResponse.json() as Record<string, unknown>;
+  assert.equal(accountDetails.email, email);
+  assert.equal(accountDetails.email_verified, true);
+  assert.equal(typeof accountDetails.created_at, "string");
+  assert(!("password" in accountDetails) && !("salt" in accountDetails));
+  assert.equal((await fetch(`${base}/o/account`, { method: "PATCH", headers: accountHeaders,
+    body: JSON.stringify({ firstName: "Updated", lastName: "Profile", email: "other@example.com" }) })).status, 400);
+  const updated = await fetch(`${base}/o/account`, { method: "PATCH", headers: accountHeaders,
+    body: JSON.stringify({ firstName: "Updated", lastName: "Profile" }) });
+  assert.equal(updated.status, 200);
+  assert.equal((await updated.json() as { name: string }).name, "Updated Profile");
+  const updatedInfo = await fetch(`${base}/o/userinfo`, { headers: accountHeaders });
+  assert.equal((await updatedInfo.json() as { name: string }).name, "Updated Profile");
+  console.log("PASS only first-party access tokens can read/update a profile; private fields stay private");
+
+  const removeAccount = (body: unknown) => fetch(`${base}/o/account`, {
+    method: "DELETE", headers: accountHeaders, body: JSON.stringify(body),
+  });
+  assert.equal((await removeAccount({ password: "incorrect", confirmationEmail: email })).status, 403);
+  assert.equal((await removeAccount({ password, confirmationEmail: "other@example.com" })).status, 400);
+  assert.equal((await fetch(`${base}/o/account`, { headers: accountHeaders })).status, 200);
+  assert.equal((await removeAccount({ password, confirmationEmail: email })).status, 204);
+  assert.equal((await fetch(`${base}/o/account`, { headers: accountHeaders })).status, 401);
+  assert.equal((await fetch(`${base}/o/userinfo`, { headers: accountHeaders })).status, 404);
+  assert.equal((await post("/o/authenticate/login", { email, password })).response.status, 401);
+  assert.equal((await post("/o/token", { grant_type: "refresh_token", client_id: clientId,
+    client_secret: registration.data.clientSecret, refresh_token: tokens.data.refresh_token })).response.status, 400);
+  console.log("PASS deletion requires password/email confirmation and removes account access and refresh credentials");
 } finally {
   const database = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await database.connect();
