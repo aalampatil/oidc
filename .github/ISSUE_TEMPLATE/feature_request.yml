@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an improvement to the provider, hosted UI, or documentation.
+title: "[Feature]: "
+body:
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and pull requests for this idea.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Who would benefit, and what are they trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Describe the behavior you would like and any relevant examples.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe other approaches or current workarounds.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Include relevant documentation or specifications, compatibility considerations, or mockups. Use dummy data and remove secrets.

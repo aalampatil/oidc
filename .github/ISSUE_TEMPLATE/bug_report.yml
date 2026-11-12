@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a reproducible problem with the provider or hosted UI.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For vulnerabilities, follow [the security policy](https://github.com/aalampatil/oidc/blob/main/SECURITY.md) and report privately. Remove credentials, tokens, private keys, and personal data from all examples and logs.
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: This is an ordinary bug report; suspected vulnerabilities will be reported privately.
+          required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the problem and the affected feature or endpoint.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Provide numbered steps and a minimal example using dummy data.
+      placeholder: |
+        1. Configure ...
+        2. Open ...
+        3. Submit ...
+        4. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the commit, OS, Bun version, browser/version, and whether the provider and UI are local or deployed. Add PostgreSQL version when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, screenshots, and configuration
+      description: Optional sanitized evidence. Do not paste .env files, authorization headers, cookies, tokens, passwords, or private signing keys.
